@@ -879,7 +879,7 @@ function renderTable(vid, usda) {
 // Hash is SHA-256 of your chosen password (hex string).
 // Generate with: python3 -c "import hashlib; print(hashlib.sha256(b'YOUR_PASSWORD').hexdigest())"
 // Then replace REPLACE_ME_WITH_SHA256_HASH below.
-const PW_HASH = '651a2ddc39ed1da7da75c8d0674c97ff4211b3b22c4c10157271df4d53b850a1';
+const PW_HASH = '5bfb465be6c5f27689489ec9dad7ba9d06d723e0ce0e765ced15333cd820cf2b';
 
 async function sha256hex(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
