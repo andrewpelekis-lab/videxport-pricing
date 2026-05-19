@@ -196,6 +196,22 @@
   .status.loaded { color: var(--c-good); font-weight: 500; }
   .status.error { color: var(--c-bad); font-weight: 500; }
 
+  /* Bridge panel */
+  .bridge-controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .bridge-controls label { font-size: 12px; color: var(--c-muted); font-weight: 500; margin-right: 4px; }
+  .bridge-controls input[type="number"] { font-size: 13px; padding: 4px 8px; border: 1px solid var(--c-border-strong); border-radius: 4px; width: 82px; background: #fff; font-family: inherit; }
+  .bridge-controls select { font-size: 13px; padding: 4px 8px; border: 1px solid var(--c-border-strong); border-radius: 4px; background: #fff; font-family: inherit; }
+  .bridge-controls button { font-size: 11px; padding: 4px 10px; border: 1px solid var(--c-border-strong); border-radius: 4px; background: #fff; cursor: pointer; color: var(--c-muted); }
+  .bridge-controls button:hover { background: var(--c-bg); }
+  .bridge-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .bridge-sens { overflow-x: auto; margin-top: 16px; }
+  .bridge-sens table.data tr.total-row td { border-top: 2px solid var(--c-border-strong); font-weight: 600; }
+  .bridge-footnotes { margin-top: 18px; border-top: 1px solid var(--c-border); padding-top: 14px; }
+  .bridge-footnotes h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--c-muted); font-weight: 600; }
+  .bridge-footnotes ol { margin: 0; padding-left: 20px; font-size: 11px; color: var(--c-muted); line-height: 1.8; }
+  .bridge-footnotes li { margin-bottom: 4px; }
+  .bridge-footnotes strong { color: var(--c-text); }
+
   footer {
     text-align: center;
     padding: 16px 20px;
@@ -256,10 +272,32 @@
       <div class="chart-wrap"><canvas id="priceChart" role="img" aria-label="Time-series of USDA Nogales benchmark prices and Videxport realized prices"></canvas></div>
     </div>
 
-    <div class="chart-card">
-      <h2>Pricing bridge — Videxport realized → USDA Nogales benchmark</h2>
-      <div class="desc">Shows the cost components that explain the spread between Videxport's net realized price and the USDA Nogales shipping-point benchmark. Cost estimates are illustrative — update <code>BRIDGE_COMPONENTS</code> in the script with actual contract rates.</div>
-      <div class="chart-wrap"><canvas id="bridgeChart" role="img" aria-label="Pricing bridge waterfall chart"></canvas></div>
+    <div class="chart-card" id="bridge-panel">
+      <h2>Pricing bridge — USDA Nogales gross to Videxport packhouse value</h2>
+      <div class="desc">Top-down decomposition of intermediary fees and risk reserves between the US delivery point and Videxport's packhouse in Hermosillo. Each deduction is sourced from the deal-room marketing agreements or contemporaneous industry benchmarks.</div>
+
+      <div class="bridge-controls">
+        <div><label>USDA Nogales gross $/box</label><input type="number" id="bridge-usda-input" step="0.25" min="0" max="80" placeholder="Loading…"></div>
+        <button id="bridge-reset-btn" title="Reset to live data feed">↺ Data feed</button>
+        <div><label>Scenario&nbsp;</label><select id="bridge-scenario"><option value="base">Base</option><option value="conservative">Conservative</option><option value="aggressive">Aggressive</option></select></div>
+      </div>
+
+      <div class="bridge-kpis" id="bridge-kpis"></div>
+
+      <div class="chart-wrap" style="height:380px">
+        <canvas id="bridgeChart" role="img" aria-label="Pricing bridge waterfall chart"></canvas>
+      </div>
+
+      <div class="bridge-sens" id="bridge-sens"></div>
+
+      <div class="bridge-footnotes">
+        <h4>Cross-checks &amp; reference prices</h4>
+        <ol>
+          <li><strong>Historical Videxport realized prices</strong> (consolidated P&amp;L basis, per Question List §2 commodity price table): 2023A <strong>$23.76/box</strong> · 2024A <strong>$23.51/box</strong> · 2025A <strong>$29.00/box</strong>. Source: 260413_-_Videxport_-_Question_List__1_.docx.</li>
+          <li><strong>Giumarra invoice file</strong> (Invoice_Grape_Giumarra_1.xlsx): 2024 weighted-avg gross FOB to retailers = <strong>$20.30/box</strong> across 1,956,678 boxes; 2025 weighted-avg = <strong>$27.77/box</strong> across 1,185,840 boxes.</li>
+          <li><strong>Mexican CFDI tax invoices</strong> (e.g. F0000001985.xml, May 14 2026): Videxport invoices Giumarra at <strong>$10.00/box DAP Nogales</strong> on Early Sweet shipments. This is the transfer-pricing entry for Mexican customs clearance — <em>not</em> the realized economic price.</li>
+        </ol>
+      </div>
     </div>
 
     <div class="trigger-card" id="trigger-card">
@@ -685,106 +723,280 @@ function renderPriceChart(vid, usda) {
 }
 
 // ── Pricing bridge ────────────────────────────────────────────────────────
-// Update these with actual Videxport contract rates when available.
-// type:'pct'   → fraction of USDA mid price (e.g. 0.12 = 12% commission)
-// type:'fixed' → flat $/box deduction
-const BRIDGE_COMPONENTS = [
-  { label: 'Broker commission',     type: 'pct',   value: 0.12  },
-  { label: 'Freight to Nogales',    type: 'fixed', value: 1.80  },
-  { label: 'Cold chain & handling', type: 'fixed', value: 0.75  },
-  { label: 'Insurance & phyto',     type: 'fixed', value: 0.18  },
-];
+let bridgeFeedUsda = null;
 
-function renderPriceBridge(vid, usda) {
+function getEffectiveUsda() {
+  const input = document.getElementById('bridge-usda-input');
+  const v = input ? parseFloat(input.value) : NaN;
+  return (!isNaN(v) && v > 0) ? v : bridgeFeedUsda;
+}
+
+const BRIDGE_CONFIG = {
+  usda_gross: 25.08,
+  deductions: [
+    {
+      name: 'Broker commission', type: 'percent',
+      base: 0.10, conservative: 0.10, aggressive: 0.10,
+      source: '§11 of Giumarra Marketing Agreement (10% sales commission on FOB sales price). ' +
+              'Confirmed by Four Star Marketing Agreement, Exhibit E (parallel 10% rate). ' +
+              'File: Marketing_Agreement_VidexportFourStar_26_season.pdf, p.28.',
+    },
+    {
+      name: 'Giumarra patent royalty', type: 'percent',
+      base: 0.05, conservative: 0.05, aggressive: 0.03,
+      source: 'Four Star Marketing Agreement §1.3(e)(iii)(D): 5% royalty to Agricultural Research ' +
+              'and Development LLC dba Giumarra on all patented varieties. Aggressive case weighted ' +
+              'by ~60% patented-variety share (Sugar Drop, Honey Pop, Passion Fire, ARRA series).',
+    },
+    {
+      name: 'Freight to Nogales', type: 'absolute',
+      base: 1.85, conservative: 2.20, aggressive: 1.50,
+      source: 'Refrigerated truck Hermosillo packhouse → Rio Rico cold storage (~440 mi). ' +
+              'Industry benchmark $1.50–$2.20/box for palletized 18-lb cartons. ' +
+              'Destination confirmed in SALIDA.pdf (Giumarra, 837 E. Frontage Rd., Rio Rico AZ).',
+    },
+    {
+      name: 'Cold chain & handling', type: 'absolute',
+      base: 0.75, conservative: 0.95, aggressive: 0.60,
+      source: 'Pre-cool plus in/out handling at Rio Rico cold storage. Four Star Marketing Agreement ' +
+              '§1.3(e)(iii)(B): "in and out handling charges at any cold storage facility." ' +
+              'Industry benchmark $0.60–$0.95/box.',
+    },
+    {
+      name: 'US customs & phyto', type: 'absolute',
+      base: 0.25, conservative: 0.35, aggressive: 0.20,
+      source: 'US Customs brokerage + USDA APHIS phytosanitary inspection + FDA documentation. ' +
+              'Four Star Marketing Agreement §1.3(e)(iii)(E)–(F). ' +
+              'SALIDA.pdf shows FDA Reg. 18343001352 on every shipment.',
+    },
+    {
+      name: 'Cargo insurance', type: 'absolute',
+      base: 0.15, conservative: 0.25, aggressive: 0.10,
+      source: 'In-transit cargo insurance, distinct from Pro-Agro pre-harvest crop policy. ' +
+              'Giumarra Marketing Agreement §12: Giumarra named as additional insured and loss payee. ' +
+              'Industry rate ~$0.10–$0.25/box.',
+    },
+    {
+      name: 'Claims / rejection reserve', type: 'percent',
+      base: 0.04, conservative: 0.06, aggressive: 0.02,
+      source: 'Reserve for retailer chargebacks, condition claims, and DC rejections. ' +
+              'Giumarra Marketing Agreement §13: "Giumarra has the right to hold back from remittance ' +
+              'an amount sufficient to pay the claims asserted by the customer." ' +
+              'Mid-case 4%; range 2–6% depending on season quality.',
+    },
+    {
+      name: 'Promo / slotting', type: 'percent',
+      base: 0.03, conservative: 0.04, aggressive: 0.02,
+      source: 'Retail program allowances, slotting fees, and advertising contributions. ' +
+              'Giumarra Marketing Agreement §11 "Sales Charges": advertising allowances, tariffs, ' +
+              'volume discounts, slotting fees, and other customer programs. Industry range 2–4% FOB.',
+    },
+  ],
+};
+
+function computeBridge(usdaGross, scenario) {
+  const deductions = BRIDGE_CONFIG.deductions.map(d => ({
+    name:   d.name,
+    amount: d.type === 'percent' ? usdaGross * d[scenario] : d[scenario],
+    source: d.source,
+  }));
+  const totalDeductions = deductions.reduce((a, b) => a + b.amount, 0);
+  return { usdaGross, deductions, totalDeductions, packhouseValue: usdaGross - totalDeductions };
+}
+
+function drawBridgeKpis(usdaGross, scenario) {
+  const b     = computeBridge(usdaGross, scenario);
+  const bBase = computeBridge(usdaGross, 'base');
+  const bCons = computeBridge(usdaGross, 'conservative');
+  const sLabel = { base: 'base', conservative: 'conservative', aggressive: 'aggressive' }[scenario];
+  const kpis = [
+    { label: 'USDA Nogales gross',
+      value: '$' + usdaGross.toFixed(2),
+      sub: 'per box, 18-lb carton · blended to Vid variety mix', cls: '' },
+    { label: 'Total deductions (' + sLabel + ')',
+      value: '−$' + b.totalDeductions.toFixed(2),
+      sub: (b.totalDeductions / usdaGross * 100).toFixed(1) + '% of USDA gross', cls: 'warn' },
+    { label: 'Packhouse value — base',
+      value: '$' + bBase.packhouseValue.toFixed(2),
+      sub: (bBase.packhouseValue / usdaGross * 100).toFixed(1) + '% of USDA gross', cls: 'good' },
+    { label: 'Packhouse value — conservative',
+      value: '$' + bCons.packhouseValue.toFixed(2),
+      sub: (bCons.packhouseValue / usdaGross * 100).toFixed(1) + '% of USDA gross', cls: '' },
+  ];
+  document.getElementById('bridge-kpis').innerHTML = kpis.map(k =>
+    '<div class="kpi ' + k.cls + '"><div class="label">' + k.label + '</div>' +
+    '<div class="value">' + k.value + '</div><div class="sub">' + k.sub + '</div></div>'
+  ).join('');
+}
+
+function drawBridgeChart(usdaGross, scenario) {
   const canvas = document.getElementById('bridgeChart');
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
 
-  const usdaAvg = usda.length ? usda.reduce((a, b) => a + b.midpoint, 0) / usda.length : null;
-  const vidAvg  = vid.length  ? weightedAvg(vid) : null;
+  const b = computeBridge(usdaGross, scenario);
 
-  if (!usdaAvg || !vidAvg) {
-    drawCanvasMessage('bridgeChart', 'Select a crop with both USDA and Videxport data to view the pricing bridge.');
-    return;
-  }
-
-  const components = BRIDGE_COMPONENTS.map(c => ({
-    label:  c.label,
-    amount: c.type === 'pct' ? c.value * usdaAvg : c.value,
-  }));
-
-  const statedTotal = components.reduce((a, b) => a + b.amount, 0);
-  const totalGap    = usdaAvg - vidAvg;         // gap to explain (positive = USDA > Vid)
-  const residual    = totalGap - statedTotal;   // balancing item
-
-  const labels = [
-    'Videxport realized',
-    ...components.map(c => c.label),
-    'Residual / other',
-    'USDA Nogales mid',
-  ];
-
-  // Floating bars [bottom, top] — bridge rises from Vid realized up to USDA mid
+  const labels  = ['USDA gross', 'Commission', 'Royalty', 'Freight',
+                   'Cold chain', 'Customs / phyto', 'Insurance',
+                   'Claims reserve', 'Promo / slotting', 'Packhouse value'];
   const floatData = [];
   const colors    = [];
-  let running = vidAvg;
+  const sources   = [];
 
-  floatData.push([0, vidAvg]);
-  colors.push('rgba(29,158,117,0.85)');           // green — start
+  floatData.push([0, usdaGross]);
+  colors.push('rgba(107,107,102,0.82)');
+  sources.push('USDA AMS Specialty Crops Market News — Phoenix Shipping Point Fruit Prices (IX_FV110).');
 
-  for (const comp of components) {
-    floatData.push([running, running + comp.amount]);
-    colors.push('rgba(163,45,45,0.72)');           // red — cost step
-    running += comp.amount;
+  let running = usdaGross;
+  for (const d of b.deductions) {
+    floatData.push([running - d.amount, running]);
+    colors.push('rgba(163,45,45,0.72)');
+    sources.push(d.source);
+    running -= d.amount;
   }
 
-  floatData.push([running, running + residual]);
-  colors.push(residual >= 0 ? 'rgba(186,117,23,0.70)' : 'rgba(29,158,117,0.50)'); // amber / green
-  running += residual;
+  floatData.push([0, b.packhouseValue]);
+  colors.push('rgba(29,158,117,0.85)');
+  sources.push('Computed: USDA gross less all deductions (' + scenario + ' case).');
 
-  floatData.push([0, usdaAvg]);
-  colors.push('rgba(31,56,100,0.85)');             // accent blue — USDA end
+  const n = floatData.length;
 
-  const yMin = Math.max(0, vidAvg - totalGap * 0.4);
+  function wrapSrc(src) {
+    const words = src.split(' ');
+    const lines = []; let line = '';
+    for (const w of words) {
+      if ((line + ' ' + w).trim().length > 72) { if (line) lines.push(line); line = w; }
+      else line = (line + ' ' + w).trim();
+      if (lines.length >= 3) { lines.push('…'); break; }
+    }
+    if (lines.length < 4 && line) lines.push(line);
+    return lines;
+  }
+
+  const datalabelsPlugin = {
+    id: 'bridgeLabels',
+    afterDatasetsDraw(chart) {
+      const ctx  = chart.ctx;
+      const meta = chart.getDatasetMeta(0);
+      meta.data.forEach((bar, i) => {
+        const [lo, hi] = floatData[i];
+        const yHi = chart.scales.y.getPixelForValue(hi);
+        const yLo = chart.scales.y.getPixelForValue(lo);
+        const barH = Math.abs(yHi - yLo);
+        const isAnchor = i === 0 || i === n - 1;
+        const text = isAnchor ? '$' + hi.toFixed(2) : '−$' + (hi - lo).toFixed(2);
+        ctx.save();
+        ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        if (barH >= 14) {
+          ctx.fillStyle = '#fff';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, bar.x, (yHi + yLo) / 2);
+        } else {
+          ctx.fillStyle = '#1a1a1a';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(text, bar.x, yHi - 3);
+        }
+        ctx.restore();
+      });
+    },
+  };
 
   new Chart(canvas.getContext('2d'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data:            floatData,
-        backgroundColor: colors,
-        borderColor:     colors,
-        borderWidth:     1,
-        borderRadius:    3,
-      }],
-    },
+    data: { labels, datasets: [{ data: floatData, backgroundColor: colors,
+            borderColor: colors, borderWidth: 1, borderRadius: 3 }] },
+    plugins: [datalabelsPlugin],
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
-        y: {
-          min: yMin,
-          title: { display: true, text: '$ / box' },
-          ticks: { callback: v => '$' + v.toFixed(0) },
-        },
-        x: { ticks: { maxRotation: 20, minRotation: 0 } },
+        y: { min: 14, max: Math.max(27, Math.ceil(usdaGross) + 1),
+             title: { display: true, text: '$ / box  (18-lb carton)' },
+             ticks: { callback: v => '$' + v.toFixed(0) } },
+        x: { ticks: { font: { size: 10 }, maxRotation: 20, minRotation: 0 } },
       },
       plugins: {
         legend: { display: false },
+        title: {
+          display: true,
+          text: ({ base: 'Base', conservative: 'Conservative', aggressive: 'Aggressive' }[scenario]) +
+                ' case  ·  USDA gross: $' + usdaGross.toFixed(2) + '/box',
+          font: { size: 11, weight: 'normal' }, color: '#6b6b66',
+        },
         tooltip: {
           callbacks: {
             label: (ctx) => {
               const [lo, hi] = ctx.raw;
-              const amt = hi - lo;
               const i = ctx.dataIndex;
-              if (i === 0 || i === labels.length - 1) return '$' + hi.toFixed(2) + ' / box';
-              return (amt >= 0 ? '+' : '') + '$' + amt.toFixed(2) + ' / box';
+              return (i === 0 || i === n - 1)
+                ? '$' + hi.toFixed(2) + ' / box'
+                : '−$' + (hi - lo).toFixed(2) + ' / box';
             },
+            afterLabel: (ctx) => wrapSrc(sources[ctx.dataIndex] || ''),
           },
         },
       },
     },
   });
+}
+
+function drawBridgeSensitivity(usdaGross) {
+  const scenarios = ['conservative', 'base', 'aggressive'];
+  const sLabels   = { conservative: 'Conservative', base: 'Base', aggressive: 'Aggressive' };
+  const bridges   = {};
+  scenarios.forEach(s => { bridges[s] = computeBridge(usdaGross, s); });
+
+  let html = '<table class="data" style="min-width:500px"><thead><tr><th>Component</th>' +
+    scenarios.map(s => '<th class="num">' + sLabels[s] + '</th>').join('') +
+    '</tr></thead><tbody>';
+
+  html += '<tr><td>USDA Nogales gross</td>' +
+    scenarios.map(() => '<td class="num">$' + usdaGross.toFixed(2) + '</td>').join('') + '</tr>';
+
+  BRIDGE_CONFIG.deductions.forEach((d, i) => {
+    html += '<tr><td style="padding-left:14px;color:var(--c-muted)">' + d.name + '</td>' +
+      scenarios.map(s => '<td class="num neg">−$' + bridges[s].deductions[i].amount.toFixed(2) + '</td>').join('') +
+      '</tr>';
+  });
+
+  html += '<tr class="total-row"><td>Total deductions</td>' +
+    scenarios.map(s => {
+      const td = bridges[s].totalDeductions;
+      return '<td class="num neg">−$' + td.toFixed(2) +
+             ' <span style="font-weight:400;font-size:10px;color:var(--c-muted)">(' +
+             (td / usdaGross * 100).toFixed(1) + '%)</span></td>';
+    }).join('') + '</tr>';
+
+  html += '<tr class="total-row"><td>Packhouse value</td>' +
+    scenarios.map(s => {
+      const pv = bridges[s].packhouseValue;
+      return '<td class="num pos">$' + pv.toFixed(2) +
+             ' <span style="font-weight:400;font-size:10px;color:var(--c-muted)">(' +
+             (pv / usdaGross * 100).toFixed(1) + '% of USDA)</span></td>';
+    }).join('') + '</tr>';
+
+  html += '</tbody></table>';
+  document.getElementById('bridge-sens').innerHTML = html;
+}
+
+function refreshBridgeDisplay() {
+  const usdaGross = getEffectiveUsda();
+  const scenario  = (document.getElementById('bridge-scenario') || {}).value || 'base';
+  if (!usdaGross) {
+    drawCanvasMessage('bridgeChart', 'No USDA price available — select a crop or enter a USDA price above.');
+    return;
+  }
+  drawBridgeKpis(usdaGross, scenario);
+  drawBridgeChart(usdaGross, scenario);
+  drawBridgeSensitivity(usdaGross);
+}
+
+function renderPriceBridge(vid, usda) {
+  const arr = usda.filter(r => r.midpoint != null && !isNaN(r.midpoint));
+  bridgeFeedUsda = arr.length ? arr.reduce((a, b) => a + b.midpoint, 0) / arr.length : null;
+  const input = document.getElementById('bridge-usda-input');
+  if (input && bridgeFeedUsda && !input.dataset.userSet) input.value = bridgeFeedUsda.toFixed(2);
+  refreshBridgeDisplay();
 }
 
 function renderTriggers(vid, usda) {
@@ -972,6 +1184,19 @@ document.getElementById('refresh-btn').addEventListener('click', function() {
   document.getElementById('empty-state').textContent = 'Loading data…';
   loadData();
 });
+
+// Bridge controls
+document.getElementById('bridge-usda-input').addEventListener('input', function() {
+  this.dataset.userSet = '1';
+  refreshBridgeDisplay();
+});
+document.getElementById('bridge-reset-btn').addEventListener('click', function() {
+  const input = document.getElementById('bridge-usda-input');
+  delete input.dataset.userSet;
+  if (bridgeFeedUsda) input.value = bridgeFeedUsda.toFixed(2);
+  refreshBridgeDisplay();
+});
+document.getElementById('bridge-scenario').addEventListener('change', refreshBridgeDisplay);
 
 // ── Init: skip gate if already authenticated this session ─────
 if (sessionStorage.getItem('videxport_auth') === '1') {
