@@ -910,7 +910,8 @@ function drawBridgeChart(usdaGross, scenario) {
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
-        y: { min: 14, max: Math.max(27, Math.ceil(usdaGross) + 1),
+        y: { min: Math.max(0, Math.floor(b.packhouseValue) - 1),
+             max: Math.ceil(usdaGross) + 1,
              title: { display: true, text: '$ / box  (18-lb carton)' },
              ticks: { callback: v => '$' + v.toFixed(0) } },
         x: { ticks: { font: { size: 10 }, maxRotation: 20, minRotation: 0 } },
@@ -992,6 +993,13 @@ function refreshBridgeDisplay() {
 }
 
 function renderPriceBridge(vid, usda) {
+  const panel = document.getElementById('bridge-panel');
+  const crop  = (document.getElementById('crop-filter') || {}).value;
+  if (crop !== 'Grape') {
+    if (panel) panel.style.display = 'none';
+    return;
+  }
+  if (panel) panel.style.display = '';
   const arr = usda.filter(r => r.midpoint != null && !isNaN(r.midpoint));
   bridgeFeedUsda = arr.length ? arr.reduce((a, b) => a + b.midpoint, 0) / arr.length : null;
   const input = document.getElementById('bridge-usda-input');
