@@ -248,7 +248,6 @@
   <div class="controls" id="controls" style="display: none;">
     <div><label>Crop</label><select id="crop-filter"></select></div>
     <div><label>Variety bucket</label><select id="variety-filter"><option value="all">All</option></select></div>
-    <div><label>Size</label><select id="size-filter"><option value="all">All sizes</option></select></div>
     <div><label>Date from</label><input type="date" id="date-from"></div>
     <div><label>Date to</label><input type="date" id="date-to"></div>
   </div>
@@ -443,6 +442,35 @@ function cropToCommoditySubstring(crop) {
   return m[crop] || (crop || '').toUpperCase();
 }
 
+function buildVarietyFilter(crop) {
+  const varSel = document.getElementById('variety-filter');
+  const prev = varSel.value;
+  let buckets;
+  if (crop === 'Grape') {
+    const sub = cropToCommoditySubstring('Grape');
+    const all = [...new Set([
+      ...USDA.filter(r => (r.commodity||'').indexOf(sub) >= 0).map(r => r.variety).filter(Boolean),
+      ...VID.filter(r => r.crop === 'Grape').map(r => r.usdaBucket).filter(Boolean),
+    ])].sort();
+    buckets = all.filter(b => b in VIDEXPORT_BUCKET_LABELS);
+  } else {
+    const sub = cropToCommoditySubstring(crop);
+    buckets = [...new Set(
+      USDA.filter(r => (r.commodity||'').indexOf(sub) >= 0).map(r => r.variety).filter(Boolean)
+    )].sort();
+  }
+  if (buckets.length === 0) {
+    varSel.innerHTML = '<option value="all">All</option>';
+  } else {
+    varSel.innerHTML = '<option value="all">All</option>' +
+      buckets.map(b => {
+        const vid = VIDEXPORT_BUCKET_LABELS[b];
+        return '<option value="' + b + '">' + b + (vid ? ' [' + vid + ']' : '') + '</option>';
+      }).join('');
+    if (prev && [...varSel.options].some(o => o.value === prev)) varSel.value = prev;
+  }
+}
+
 function buildFilters() {
   const usdaCrops = USDA.map(r => commodityToCrop(r.commodity)).filter(Boolean);
   const vidCrops = VID.map(r => r.crop).filter(Boolean);
@@ -454,24 +482,14 @@ function buildFilters() {
     : '<option value="">(no crops)</option>';
   if (prev && crops.indexOf(prev) >= 0) cropSel.value = prev;
 
-  const allBuckets = [...new Set([
-    ...USDA.map(r => r.variety).filter(Boolean),
-    ...VID.map(r => r.usdaBucket).filter(Boolean)
-  ])].sort();
-  const buckets = allBuckets.filter(b => b in VIDEXPORT_BUCKET_LABELS);
-  const varSel = document.getElementById('variety-filter');
-  varSel.innerHTML = '<option value="all">All</option>' +
-    buckets.map(b => {
-      const vid = VIDEXPORT_BUCKET_LABELS[b];
-      return '<option value="' + b + '">' + b + (vid ? ' [' + vid + ']' : '') + '</option>';
-    }).join('');
+  const currentCrop = cropSel.value;
+  buildVarietyFilter(currentCrop);
 
-  const sizes = [...new Set(USDA.map(r => r.size).filter(Boolean))].sort();
-  const sizeSel = document.getElementById('size-filter');
-  sizeSel.innerHTML = '<option value="all">All sizes</option>' +
-    sizes.map(s => '<option value="' + s + '">' + s + '</option>').join('');
-
-  ['crop-filter','variety-filter','size-filter','date-from','date-to'].forEach(id => {
+  document.getElementById('crop-filter').onchange = safe(function() {
+    buildVarietyFilter(document.getElementById('crop-filter').value);
+    applyFilters();
+  }, 'crop-filter change');
+  ['variety-filter','date-from','date-to'].forEach(id => {
     document.getElementById(id).onchange = safe(applyFilters, id + ' change');
   });
 }
@@ -479,7 +497,6 @@ function buildFilters() {
 function applyFilters() {
   const crop = document.getElementById('crop-filter').value;
   const variety = document.getElementById('variety-filter').value;
-  const size = document.getElementById('size-filter').value;
   const dateFrom = document.getElementById('date-from').value;
   const dateTo = document.getElementById('date-to').value;
 
@@ -491,7 +508,6 @@ function applyFilters() {
   const sub = cropToCommoditySubstring(crop);
   let usdaF = USDA.filter(r => (r.commodity || '').indexOf(sub) >= 0);
   if (variety !== 'all') usdaF = usdaF.filter(r => r.variety === variety);
-  if (size !== 'all') usdaF = usdaF.filter(r => r.size === size);
   if (dateFrom) usdaF = usdaF.filter(r => r.date >= new Date(dateFrom));
   if (dateTo) usdaF = usdaF.filter(r => r.date <= new Date(dateTo));
 
@@ -688,8 +704,6 @@ function renderBasisChart(vid, usda) {
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
   basisChart = null;
-  const sizeFilter = document.getElementById('size-filter').value;
-
   // Reuse the same weekly bucketing approach as the price chart
   function weekKey(d) {
     const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -710,7 +724,7 @@ function renderBasisChart(vid, usda) {
   const weekSet = {};
   const byBucket = {};
   vid.filter(r => r.date && r.usdaBucket).forEach(r => {
-    const usdaPx = usdaAvgOnDate(usda, r.date, r.usdaBucket, sizeFilter, 7);
+    const usdaPx = usdaAvgOnDate(usda, r.date, r.usdaBucket, null, 7);
     if (usdaPx == null) return;
     const basisPct = (r.perBox / usdaPx - 1) * 100;
     const wk = weekKey(r.date);
@@ -862,7 +876,6 @@ function renderTriggers(vid, usda) {
 }
 
 function renderTable(vid, usda) {
-  const sizeFilter = document.getElementById('size-filter').value;
   const tbody = document.querySelector('#liq-table tbody');
   const dated = vid.filter(r => r.date);
   const undated = vid.filter(r => !r.date);
@@ -872,7 +885,7 @@ function renderTable(vid, usda) {
   const rows = [...sortedDated, ...sortedUndated];
 
   tbody.innerHTML = rows.map(r => {
-    const usdaPx = r.date ? usdaAvgOnDate(usda, r.date, r.usdaBucket, sizeFilter, 7) : null;
+    const usdaPx = r.date ? usdaAvgOnDate(usda, r.date, r.usdaBucket, null, 7) : null;
     const basis = usdaPx ? r.perBox - usdaPx : null;
     const basisPct = usdaPx ? (r.perBox / usdaPx - 1) * 100 : null;
     const basisClass = basis == null ? '' : basis >= 0 ? 'pos' : 'neg';
