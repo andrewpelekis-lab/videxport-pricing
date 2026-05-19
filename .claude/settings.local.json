@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Recurse \"C:\\\\Users\\\\andre\\\\videxport\" | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\andre\\\\videxport\\\\\", \"\"\\) })",
+      "PowerShell(Get-ChildItem -Recurse \"C:\\\\Users\\\\andre\\\\videxport\" -File | Where-Object { $_.Name -match \"\\\\.html$|dashboard|liquidation\" } | Select-Object FullName, Length)",
+      "PowerShell(cmd /c \"dir /s /b C:\\\\Users\\\\andre\\\\videxport\")",
+      "PowerShell(New-Item *)",
+      "PowerShell(cmd /c \"dir C:\\\\Users\\\\andre\\\\videxport\\\\docs\\\\data\")"
+    ]
+  }
+}

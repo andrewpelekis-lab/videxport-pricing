@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.env
+.env.*
+venv/
+.venv/
+
+# Local secrets / scratch
+*.key
+secrets.txt
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Local data exports (keep data/ tracked, exclude any local-only dumps)
+*.bak

@@ -1,0 +1,36 @@
+name: Refresh USDA Data
+
+on:
+  schedule:
+    - cron: '0 14 * * 1'  # Every Monday at 14:00 UTC
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Refresh USDA data
+        env:
+          USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
+        run: python scripts/refresh_usda.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/usda_master.csv
+          git diff --staged --quiet || git commit -m "Auto-refresh USDA data $(date -u +%Y-%m-%d)"
+          git push

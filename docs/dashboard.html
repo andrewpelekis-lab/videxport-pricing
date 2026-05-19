@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Videxport Pricing Surveillance Dashboard</title>
+<style>
+  :root {
+    --c-bg: #f8f8f6;
+    --c-card: #ffffff;
+    --c-border: rgba(0,0,0,0.10);
+    --c-border-strong: rgba(0,0,0,0.20);
+    --c-text: #1a1a1a;
+    --c-muted: #6b6b66;
+    --c-accent: #1F3864;
+    --c-good: #1D9E75;
+    --c-warn: #BA7517;
+    --c-bad: #A32D2D;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--c-bg);
+    color: var(--c-text);
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--c-accent);
+    color: #fff;
+    padding: 14px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 500; }
+  header .sub { font-size: 12px; opacity: 0.85; }
+
+  .container { padding: 18px 22px; max-width: 1400px; margin: 0 auto; }
+
+  .upload-zone {
+    background: var(--c-card);
+    border: 1px dashed var(--c-border-strong);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .upload-zone h3 { margin: 0 0 6px; font-size: 13px; font-weight: 500; color: var(--c-accent); }
+  .upload-zone .file-line { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .upload-zone input[type="file"] { font-size: 11px; }
+  .status { font-size: 11px; color: var(--c-muted); margin-top: 4px; }
+  .status.loaded { color: var(--c-good); font-weight: 500; }
+  .status.error { color: var(--c-bad); font-weight: 500; }
+
+  .debug {
+    background: #fffaf0;
+    border: 1px solid #f5d49c;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #7a4f0a;
+    display: none;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    white-space: pre-wrap;
+  }
+  .debug.active { display: block; }
+
+  .controls {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .controls label { font-size: 12px; color: var(--c-muted); margin-right: 6px; font-weight: 500; }
+  .controls select, .controls input { font-size: 13px; padding: 4px 8px; border: 1px solid var(--c-border-strong); border-radius: 4px; background: #fff; }
+
+  .grid-kpi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .kpi {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .kpi .label { font-size: 11px; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi .value { font-size: 24px; font-weight: 500; margin-top: 6px; color: var(--c-text); }
+  .kpi .sub { font-size: 11px; color: var(--c-muted); margin-top: 4px; }
+  .kpi.warn .value { color: var(--c-warn); }
+  .kpi.bad .value { color: var(--c-bad); }
+  .kpi.good .value { color: var(--c-good); }
+
+  .chart-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .chart-card h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--c-accent); }
+  .chart-card .desc { font-size: 12px; color: var(--c-muted); margin-bottom: 12px; }
+  .chart-wrap { position: relative; height: 320px; }
+
+  .basis-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--c-border-strong); color: var(--c-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  table.data td { padding: 6px 8px; border-bottom: 1px solid var(--c-border); }
+  table.data tr:hover td { background: rgba(0,0,0,0.02); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--c-good); }
+  .neg { color: var(--c-bad); }
+
+  .trigger-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .trigger-card h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; color: var(--c-accent); }
+  .trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid var(--c-border);
+  }
+  .trigger:first-of-type { border-top: 0; }
+  .trigger-label { font-size: 13px; }
+  .trigger-status { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 12px; }
+  .trigger-status.green { background: #e6f4ee; color: var(--c-good); }
+  .trigger-status.yellow { background: #faf0d9; color: var(--c-warn); }
+  .trigger-status.red { background: #fae6e6; color: var(--c-bad); }
+  .trigger-status.gray { background: #efefec; color: var(--c-muted); }
+
+  .empty-state {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--c-muted);
+  }
+
+  footer {
+    text-align: center;
+    padding: 16px 20px;
+    font-size: 11px;
+    color: var(--c-muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Videxport Pricing Surveillance Dashboard</h1>
+    <div class="sub">USDA Nogales benchmark vs. Videxport realized — basis spread monitoring</div>
+  </div>
+  <div class="sub" id="data-summary">No data loaded</div>
+</header>
+
+<div class="container">
+
+  <div class="upload-zone">
+    <div>
+      <h3>1. USDA market data</h3>
+      <div class="file-line">
+        <input type="file" id="usda-file" accept=".csv">
+        <span id="usda-status" class="status">Awaiting upload — usda_master.csv</span>
+      </div>
+    </div>
+    <div>
+      <h3>2. Videxport liquidations</h3>
+      <div class="file-line">
+        <input type="file" id="vid-file" accept=".csv,.xlsx">
+        <span id="vid-status" class="status">Awaiting upload — videxport_liquidations.csv</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="debug" class="debug"></div>
+
+  <div class="controls" id="controls" style="display: none;">
+    <div><label>Crop</label><select id="crop-filter"></select></div>
+    <div><label>Variety bucket</label><select id="variety-filter"><option value="all">All</option></select></div>
+    <div><label>Size</label><select id="size-filter"><option value="all">All sizes</option></select></div>
+    <div><label>Date from</label><input type="date" id="date-from"></div>
+    <div><label>Date to</label><input type="date" id="date-to"></div>
+  </div>
+
+  <div id="main-content" style="display: none;">
+
+    <div class="grid-kpi" id="kpi-grid"></div>
+
+    <div class="chart-card">
+      <h2>Price history — USDA Nogales vs Videxport realized</h2>
+      <div class="desc">USDA daily midpoint by variety (solid) vs. Videxport realized $/box (markers). Videxport rows without dates excluded from chart but visible in detail table.</div>
+      <div class="chart-wrap"><canvas id="priceChart" role="img" aria-label="Time-series of USDA Nogales benchmark prices and Videxport realized prices"></canvas></div>
+    </div>
+
+    <div class="basis-row">
+      <div class="chart-card">
+        <h2>Basis spread (Videxport − USDA)</h2>
+        <div class="desc">Per-liquidation basis. Negative = Videxport below USDA spot.</div>
+        <div class="chart-wrap"><canvas id="basisChart" role="img" aria-label="Basis spread chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h2>Basis distribution by season</h2>
+        <div class="desc">Average basis by variety bucket and season.</div>
+        <div class="chart-wrap"><canvas id="basisDistChart" role="img" aria-label="Basis distribution by season"></canvas></div>
+      </div>
+    </div>
+
+    <div class="trigger-card" id="trigger-card">
+      <h2>Covenant trigger monitor</h2>
+      <div id="trigger-list"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Liquidation detail</h2>
+      <div class="desc">Most recent 100 liquidations with USDA benchmark and computed basis.</div>
+      <div style="max-height: 400px; overflow-y: auto;">
+        <table class="data" id="liq-table">
+          <thead><tr>
+            <th>Date</th><th>Crop</th><th>Variety bucket</th><th>Size</th>
+            <th class="num">Boxes</th><th class="num">Vid $/box</th>
+            <th class="num">USDA mid</th><th class="num">Basis $</th><th class="num">Basis %</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="empty-state" id="empty-state">
+    Upload the USDA master CSV and Videxport liquidations file above to begin.
+    <br><br>
+    <small>
+      Refresh USDA data by running <code>python refresh_usda.py</code>.<br>
+      Append new Giumarra liquidations to <code>videxport_liquidations.xlsx</code> as they're issued.
+    </small>
+  </div>
+</div>
+
+<footer>
+  Pricing surveillance built on USDA AMS Specialty Crops Market News data.
+  Sources: IX_FV110 (Phoenix Shipping Point Fruit Prices), IX_FV120 (Vegetables).
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+'use strict';
+
+let USDA = [];
+let VID = [];
+let priceChart, basisChart, basisDistChart;
+
+const VARIETY_COLORS = {
+  'WHITE SEEDLESS TYPE': '#534AB7',
+  'FLAME SEEDLESS':      '#D85A30',
+  'BLACK SEEDLESS':      '#1D9E75',
+  'SUGRAONE':            '#185FA5',
+  'SWEET CELEBRATION':   '#993556',
+  'RED SEEDLESS':        '#A32D2D',
+  'RED GLOBE':           '#BA7517',
+  'PRIME':               '#888780',
+};
+const DEFAULT_COLORS = ['#534AB7', '#D85A30', '#1D9E75', '#185FA5', '#993556', '#BA7517', '#A32D2D', '#888780'];
+
+const debugEl = document.getElementById('debug');
+function showError(msg, err) {
+  console.error(msg, err);
+  debugEl.classList.add('active');
+  debugEl.textContent += msg + (err ? ': ' + (err.stack || err.message || err) : '') + '\n';
+}
+function clearDebug() {
+  debugEl.textContent = '';
+  debugEl.classList.remove('active');
+}
+function safe(fn, label) {
+  return function(...args) {
+    try { return fn.apply(this, args); }
+    catch (e) { showError('Error in ' + label, e); }
+  };
+}
+
+document.getElementById('usda-file').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  clearDebug();
+  Papa.parse(f, {
+    header: true, skipEmptyLines: true,
+    complete: safe((res) => {
+      USDA = res.data.map(parseUSDARow).filter(r => r.date && r.midpoint != null);
+      const dates = USDA.map(r => r.date.getTime());
+      const min = dates.length ? new Date(Math.min.apply(null, dates)) : null;
+      const max = dates.length ? new Date(Math.max.apply(null, dates)) : null;
+      const status = document.getElementById('usda-status');
+      status.textContent = `Loaded ${USDA.length} USDA observations` + (min && max ? ` · ${fmtD(min)} to ${fmtD(max)}` : '');
+      status.classList.add('loaded');
+      tryRender();
+    }, 'USDA parse'),
+    error: (err) => showError('USDA CSV parse error', err)
+  });
+});
+
+document.getElementById('vid-file').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  clearDebug();
+  const handleRows = safe((rows) => {
+    VID = rows.map(parseVidRow).filter(r => r.boxes > 0 && r.sale > 0);
+    const dates = VID.map(r => r.date ? r.date.getTime() : null).filter(t => t && !isNaN(t));
+    const min = dates.length ? new Date(Math.min.apply(null, dates)) : null;
+    const max = dates.length ? new Date(Math.max.apply(null, dates)) : null;
+    const status = document.getElementById('vid-status');
+    const undated = VID.filter(r => !r.date).length;
+    status.textContent = `Loaded ${VID.length} liquidations` +
+      (min && max ? ` · dated ${fmtD(min)} to ${fmtD(max)}` : '') +
+      (undated ? ` · ${undated} undated` : '');
+    status.classList.add('loaded');
+    tryRender();
+  }, 'Videxport handle');
+
+  if (f.name.toLowerCase().endsWith('.xlsx')) {
+    const reader = new FileReader();
+    reader.onload = safe((ev) => {
+      const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets['Liquidations'] || wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+      handleRows(rows);
+    }, 'XLSX parse');
+    reader.readAsArrayBuffer(f);
+  } else {
+    Papa.parse(f, {
+      header: true, skipEmptyLines: true,
+      complete: (res) => handleRows(res.data),
+      error: (err) => showError('Videxport CSV parse error', err)
+    });
+  }
+});
+
+function parseUSDARow(r) {
+  const low = parseFloat(r.low_price);
+  const high = parseFloat(r.high_price);
+  let midpoint = null;
+  if (!isNaN(low) && !isNaN(high)) midpoint = (low + high) / 2;
+  else if (!isNaN(low)) midpoint = low;
+  else if (!isNaN(high)) midpoint = high;
+  return {
+    date: parseDate(r.report_date),
+    commodity: (r.commodity || '').toUpperCase().trim(),
+    variety: (r.variety || '').toUpperCase().trim(),
+    size: (r.size_description || '').toLowerCase().trim(),
+    midpoint: midpoint,
+    low: isNaN(low) ? null : low,
+    high: isNaN(high) ? null : high,
+  };
+}
+
+function parseVidRow(r) {
+  const boxes = parseFloat(r['Boxes Invoiced']) || 0;
+  const sale = parseFloat(r['Sale Amount USD']) || 0;
+  return {
+    date: parseDate(r['Liquidation Date']),
+    season: r['Season'],
+    liqNum: r['Liq #'],
+    crop: r['Crop'] || '',
+    variety: r['Variety'] || '',
+    usdaBucket: (r['USDA Bucket'] || '').toUpperCase().trim(),
+    size: r['Size'] || '',
+    boxes: boxes,
+    sale: sale,
+    perBox: boxes > 0 ? sale / boxes : 0,
+  };
+}
+
+function parseDate(s) {
+  if (s === null || s === undefined || s === '') return null;
+  if (s instanceof Date) return isNaN(s) ? null : s;
+  s = String(s).trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return new Date(+m[3], +m[1]-1, +m[2]);
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function fmtD(d) {
+  if (!d || isNaN(d)) return '—';
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
+
+function tryRender() {
+  if (USDA.length === 0) return;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  document.getElementById('controls').style.display = 'flex';
+  try {
+    buildFilters();
+    applyFilters();
+  } catch (e) { showError('tryRender', e); }
+  document.getElementById('data-summary').textContent =
+    USDA.length + ' USDA obs · ' + VID.length + ' liquidations';
+}
+
+function commodityToCrop(c) {
+  c = (c || '').toUpperCase();
+  if (c.indexOf('GRAPE') >= 0) return 'Grape';
+  if (c.indexOf('WATERMELON') >= 0) return 'Watermelon';
+  if (c.indexOf('HONEYDEW') >= 0) return 'Honeydew';
+  if (c.indexOf('PEPPER') >= 0) return 'Bell Pepper';
+  if (c.indexOf('ASPARAGUS') >= 0) return 'Asparagus';
+  return null;
+}
+
+function cropToCommoditySubstring(crop) {
+  const m = { 'Grape': 'GRAPE', 'Watermelon': 'WATERMELON', 'Honeydew': 'HONEYDEW',
+              'Bell Pepper': 'PEPPER', 'Asparagus': 'ASPARAGUS' };
+  return m[crop] || (crop || '').toUpperCase();
+}
+
+function buildFilters() {
+  const usdaCrops = USDA.map(r => commodityToCrop(r.commodity)).filter(Boolean);
+  const vidCrops = VID.map(r => r.crop).filter(Boolean);
+  const crops = [...new Set([...usdaCrops, ...vidCrops])].sort();
+  const cropSel = document.getElementById('crop-filter');
+  const prev = cropSel.value;
+  cropSel.innerHTML = crops.length
+    ? crops.map(c => '<option value="' + c + '">' + c + '</option>').join('')
+    : '<option value="">(no crops)</option>';
+  if (prev && crops.indexOf(prev) >= 0) cropSel.value = prev;
+
+  const buckets = [...new Set([
+    ...USDA.map(r => r.variety).filter(Boolean),
+    ...VID.map(r => r.usdaBucket).filter(Boolean)
+  ])].sort();
+  const varSel = document.getElementById('variety-filter');
+  varSel.innerHTML = '<option value="all">All</option>' +
+    buckets.map(b => '<option value="' + b + '">' + b + '</option>').join('');
+
+  const sizes = [...new Set(USDA.map(r => r.size).filter(Boolean))].sort();
+  const sizeSel = document.getElementById('size-filter');
+  sizeSel.innerHTML = '<option value="all">All sizes</option>' +
+    sizes.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+
+  ['crop-filter','variety-filter','size-filter','date-from','date-to'].forEach(id => {
+    document.getElementById(id).onchange = safe(applyFilters, id + ' change');
+  });
+}
+
+function applyFilters() {
+  const crop = document.getElementById('crop-filter').value;
+  const variety = document.getElementById('variety-filter').value;
+  const size = document.getElementById('size-filter').value;
+  const dateFrom = document.getElementById('date-from').value;
+  const dateTo = document.getElementById('date-to').value;
+
+  let vidF = VID.filter(r => r.crop === crop);
+  if (variety !== 'all') vidF = vidF.filter(r => r.usdaBucket === variety);
+  if (dateFrom) vidF = vidF.filter(r => !r.date || r.date >= new Date(dateFrom));
+  if (dateTo) vidF = vidF.filter(r => !r.date || r.date <= new Date(dateTo));
+
+  const sub = cropToCommoditySubstring(crop);
+  let usdaF = USDA.filter(r => (r.commodity || '').indexOf(sub) >= 0);
+  if (variety !== 'all') usdaF = usdaF.filter(r => r.variety === variety);
+  if (size !== 'all') usdaF = usdaF.filter(r => r.size === size);
+  if (dateFrom) usdaF = usdaF.filter(r => r.date >= new Date(dateFrom));
+  if (dateTo) usdaF = usdaF.filter(r => r.date <= new Date(dateTo));
+
+  renderKPIs(vidF, usdaF);
+  renderPriceChart(vidF, usdaF);
+  renderBasisChart(vidF, usdaF);
+  renderBasisDist(vidF, usdaF);
+  renderTriggers(vidF, usdaF);
+  renderTable(vidF, usdaF);
+}
+
+function weightedAvg(rows) {
+  const wb = rows.reduce((a, b) => a + (b.boxes || 0), 0);
+  const ws = rows.reduce((a, b) => a + (b.sale || 0), 0);
+  return wb > 0 ? ws / wb : 0;
+}
+
+function usdaAvgOnDate(usdaArr, date, variety, sizeFilter, windowDays) {
+  if (!date) return null;
+  windowDays = windowDays || 7;
+  const min = new Date(date); min.setDate(min.getDate() - windowDays);
+  const max = new Date(date); max.setDate(max.getDate() + windowDays);
+  let pool = usdaArr.filter(r =>
+    r.date >= min && r.date <= max &&
+    (!variety || variety === 'all' || r.variety === variety)
+  );
+  if (sizeFilter && sizeFilter !== 'all') pool = pool.filter(r => r.size === sizeFilter);
+  if (pool.length === 0) return null;
+  return pool.reduce((a, b) => a + b.midpoint, 0) / pool.length;
+}
+
+function colorFor(variety, i) {
+  return VARIETY_COLORS[variety] || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+}
+
+function renderKPIs(vid, usda) {
+  const datedVid = vid.filter(r => r.date);
+  const vidLatest = datedVid.length ? datedVid.reduce((a,b) => (a.date > b.date ? a : b)) : null;
+  const usdaLatest = usda.length ? usda.reduce((a,b) => (a.date > b.date ? a : b)) : null;
+
+  const vidAvg = weightedAvg(vid);
+  const usdaAvg = usda.length ? usda.reduce((a,b) => a + b.midpoint, 0) / usda.length : 0;
+  const basis = (vidAvg && usdaAvg) ? vidAvg - usdaAvg : 0;
+  const basisPct = (vidAvg && usdaAvg) ? ((vidAvg / usdaAvg - 1) * 100) : 0;
+  const totalBoxes = vid.reduce((a, b) => a + (b.boxes || 0), 0);
+  const totalRev = vid.reduce((a, b) => a + (b.sale || 0), 0);
+
+  const haveBoth = vid.length > 0 && usda.length > 0;
+  const kpis = [
+    { label: 'Latest USDA midpoint', value: usdaLatest ? '$' + usdaLatest.midpoint.toFixed(2) : '—',
+      sub: usdaLatest ? (usdaLatest.variety + ' · ' + fmtD(usdaLatest.date)) : 'No USDA data for this crop' },
+    { label: 'Latest Videxport realized', value: vidLatest ? '$' + vidLatest.perBox.toFixed(2) : '—',
+      sub: vidLatest ? (vidLatest.usdaBucket + ' · ' + fmtD(vidLatest.date)) : 'No dated Videxport rows' },
+    { label: 'Avg basis (Vid − USDA)', value: haveBoth ? '$' + basis.toFixed(2) : '—',
+      sub: haveBoth ? basisPct.toFixed(1) + '% to USDA' : 'Need both series',
+      cls: !haveBoth ? '' : (basisPct < -15 ? 'bad' : (basisPct < -5 ? 'warn' : 'good')) },
+    { label: 'Total boxes (filter)', value: totalBoxes.toLocaleString(),
+      sub: '$' + (totalRev / 1000).toLocaleString(undefined, { maximumFractionDigits: 0 }) + 'k revenue' },
+  ];
+
+  document.getElementById('kpi-grid').innerHTML = kpis.map(k =>
+    '<div class="kpi ' + (k.cls || '') + '">' +
+    '<div class="label">' + k.label + '</div>' +
+    '<div class="value">' + k.value + '</div>' +
+    '<div class="sub">' + k.sub + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function drawCanvasMessage(canvasId, msg) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = '#6b6b66';
+  ctx.fillText(msg, 20, 40);
+}
+
+function renderPriceChart(vid, usda) {
+  const canvas = document.getElementById('priceChart');
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+  priceChart = null;
+
+  // Aggregate to weekly bins; we use a category axis to avoid Chart.js time-adapter dependency
+  // Week key = YYYY-Www, Date display label = Mon DD
+  function weekKey(d) {
+    const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+    return tmp.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
+  }
+  function weekStartDate(d) {
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const start = new Date(d);
+    start.setDate(start.getDate() + diff);
+    return start;
+  }
+
+  // Bucket USDA into weekly avg by variety
+  const usdaWeekly = {};  // {variety: {weekKey: {sum, n, dateLabel, sortDate}}}
+  usda.forEach(r => {
+    if (!r.date) return;
+    const wk = weekKey(r.date);
+    const ws = weekStartDate(r.date);
+    if (!usdaWeekly[r.variety]) usdaWeekly[r.variety] = {};
+    if (!usdaWeekly[r.variety][wk]) usdaWeekly[r.variety][wk] = {sum: 0, n: 0, sortDate: ws};
+    usdaWeekly[r.variety][wk].sum += r.midpoint;
+    usdaWeekly[r.variety][wk].n += 1;
+  });
+
+  // Bucket Videxport into weekly weighted avg by bucket
+  const vidWeekly = {};
+  vid.filter(r => r.date).forEach(r => {
+    const key = r.usdaBucket || '(no bucket)';
+    const wk = weekKey(r.date);
+    const ws = weekStartDate(r.date);
+    if (!vidWeekly[key]) vidWeekly[key] = {};
+    if (!vidWeekly[key][wk]) vidWeekly[key][wk] = {sale: 0, boxes: 0, sortDate: ws};
+    vidWeekly[key][wk].sale += r.sale;
+    vidWeekly[key][wk].boxes += r.boxes;
+  });
+
+  // Build the ordered set of week labels covering both series
+  const weekSet = {};
+  Object.values(usdaWeekly).forEach(varData => {
+    Object.entries(varData).forEach(([k, v]) => { weekSet[k] = v.sortDate; });
+  });
+  Object.values(vidWeekly).forEach(bucketData => {
+    Object.entries(bucketData).forEach(([k, v]) => { weekSet[k] = v.sortDate; });
+  });
+  const weekKeys = Object.keys(weekSet).sort((a, b) => weekSet[a] - weekSet[b]);
+  const labels = weekKeys.map(k => {
+    const d = weekSet[k];
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+  });
+
+  const datasets = [];
+  let i = 0;
+  Object.keys(usdaWeekly).forEach(v => {
+    const color = colorFor(v, i++);
+    const data = weekKeys.map(k => usdaWeekly[v][k] ? usdaWeekly[v][k].sum / usdaWeekly[v][k].n : null);
+    datasets.push({
+      label: 'USDA ' + v,
+      data: data,
+      borderColor: color, backgroundColor: color,
+      pointRadius: 1.5, borderWidth: 1.5, tension: 0.2, spanGaps: true,
+    });
+  });
+  Object.keys(vidWeekly).forEach(v => {
+    const color = colorFor(v, 0);
+    const data = weekKeys.map(k => {
+      const w = vidWeekly[v][k];
+      return w && w.boxes > 0 ? w.sale / w.boxes : null;
+    });
+    datasets.push({
+      label: 'Vid ' + v,
+      data: data,
+      borderColor: color, backgroundColor: color,
+      borderDash: [5, 4], pointStyle: 'triangle', pointRadius: 6,
+      borderWidth: 2, tension: 0, spanGaps: false,
+    });
+  });
+
+  if (datasets.length === 0 || labels.length === 0) {
+    drawCanvasMessage('priceChart', 'No dated data for the current filter selection.');
+    return;
+  }
+
+  priceChart = new Chart(document.getElementById('priceChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { maxRotation: 60, minRotation: 30, autoSkip: true, maxTicksLimit: 14 } },
+        y: { title: { display: true, text: '$ / box' } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: { callbacks: {
+          label: (c) => c.dataset.label + ': $' + (c.parsed.y == null ? '—' : c.parsed.y.toFixed(2))
+        } }
+      },
+      interaction: { mode: 'nearest', intersect: false },
+    }
+  });
+}
+
+function renderBasisChart(vid, usda) {
+  const canvas = document.getElementById('basisChart');
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+  basisChart = null;
+  const sizeFilter = document.getElementById('size-filter').value;
+
+  // Reuse the same weekly bucketing approach as the price chart
+  function weekKey(d) {
+    const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+    return tmp.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
+  }
+  function weekStartDate(d) {
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const start = new Date(d);
+    start.setDate(start.getDate() + diff);
+    return start;
+  }
+
+  const weekSet = {};
+  const byBucket = {};
+  vid.filter(r => r.date && r.usdaBucket).forEach(r => {
+    const usdaPx = usdaAvgOnDate(usda, r.date, r.usdaBucket, sizeFilter, 7);
+    if (usdaPx == null) return;
+    const basisPct = (r.perBox / usdaPx - 1) * 100;
+    const wk = weekKey(r.date);
+    weekSet[wk] = weekStartDate(r.date);
+    if (!byBucket[r.usdaBucket]) byBucket[r.usdaBucket] = {};
+    if (!byBucket[r.usdaBucket][wk]) byBucket[r.usdaBucket][wk] = {sum: 0, n: 0};
+    byBucket[r.usdaBucket][wk].sum += basisPct;
+    byBucket[r.usdaBucket][wk].n += 1;
+  });
+
+  const weekKeys = Object.keys(weekSet).sort((a, b) => weekSet[a] - weekSet[b]);
+  const labels = weekKeys.map(k => weekSet[k].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }));
+
+  let i = 0;
+  const datasets = Object.keys(byBucket).map(b => {
+    const color = colorFor(b, i++);
+    const data = weekKeys.map(k => byBucket[b][k] ? byBucket[b][k].sum / byBucket[b][k].n : null);
+    return {
+      label: b, data: data,
+      borderColor: color, backgroundColor: color,
+      pointRadius: 5, borderWidth: 2, showLine: true, tension: 0, spanGaps: true,
+    };
+  });
+
+  if (datasets.length === 0 || labels.length === 0) {
+    drawCanvasMessage('basisChart', 'No matched Vid+USDA observations in current filter.');
+    return;
+  }
+
+  basisChart = new Chart(document.getElementById('basisChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { maxRotation: 60, minRotation: 30, autoSkip: true, maxTicksLimit: 10 } },
+        y: { title: { display: true, text: 'Basis %' }, ticks: { callback: v => v.toFixed(0) + '%' } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + (c.parsed.y == null ? '—' : c.parsed.y.toFixed(1) + '%') } }
+      },
+    }
+  });
+}
+
+function renderBasisDist(vid, usda) {
+  const canvas = document.getElementById('basisDistChart');
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+  basisDistChart = null;
+
+  const seasons = [...new Set(vid.map(r => r.season).filter(s => s != null && s !== ''))].sort();
+  const buckets = [...new Set(vid.map(r => r.usdaBucket).filter(Boolean))].sort();
+
+  if (seasons.length === 0 || buckets.length === 0) {
+    drawCanvasMessage('basisDistChart', 'No Videxport season/bucket data in current filter.');
+    return;
+  }
+
+  let i = 0;
+  const datasets = buckets.map(b => {
+    const color = colorFor(b, i++);
+    const data = seasons.map(s => {
+      const vRows = vid.filter(r => String(r.season) === String(s) && r.usdaBucket === b);
+      const uRows = usda.filter(r => r.date && r.date.getFullYear() === parseInt(s) && r.variety === b);
+      if (vRows.length === 0 || uRows.length === 0) return null;
+      const vAvg = weightedAvg(vRows);
+      const uAvg = uRows.reduce((a,c) => a + c.midpoint, 0) / uRows.length;
+      if (!uAvg) return null;
+      return (vAvg / uAvg - 1) * 100;
+    });
+    return { label: b, data: data, backgroundColor: color, borderColor: color };
+  });
+
+  basisDistChart = new Chart(document.getElementById('basisDistChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: seasons, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { title: { display: true, text: 'Season-avg basis %' }, ticks: { callback: v => v.toFixed(0) + '%' } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + (c.parsed.y == null ? 'n/a' : c.parsed.y.toFixed(1) + '%') } }
+      }
+    }
+  });
+}
+
+function renderTriggers(vid, usda) {
+  const list = document.getElementById('trigger-list');
+  if (usda.length === 0) {
+    list.innerHTML = '<div style="font-size:12px; color: var(--c-muted);">No USDA data in filter</div>';
+    return;
+  }
+
+  const triggers = [];
+  const latest = usda.reduce((a,b) => (a.date > b.date ? a : b)).date;
+
+  const triggerSet = [
+    { bucket: 'WHITE SEEDLESS TYPE', floor: 15, label: 'White Seedless 2-wk trailing avg < $15/box' },
+    { bucket: 'FLAME SEEDLESS', floor: 11, label: 'Flame Seedless 2-wk trailing avg < $11/box' },
+    { bucket: 'BLACK SEEDLESS', floor: 18, label: 'Black Seedless 2-wk trailing avg < $18/box' },
+  ];
+
+  triggerSet.forEach(t => {
+    const min = new Date(latest); min.setDate(min.getDate() - 14);
+    const pool = usda.filter(r => r.variety === t.bucket && r.date >= min && r.date <= latest);
+    if (pool.length === 0) {
+      triggers.push({ label: t.label, status: 'gray', detail: 'No recent data for this variety' });
+      return;
+    }
+    const avg = pool.reduce((a, b) => a + b.midpoint, 0) / pool.length;
+    let status, detail;
+    if (avg < t.floor) { status = 'red'; detail = 'Triggered: 2-wk avg $' + avg.toFixed(2) + ' below floor $' + t.floor; }
+    else if (avg < t.floor * 1.2) { status = 'yellow'; detail = 'Approaching: 2-wk avg $' + avg.toFixed(2) + ' (floor $' + t.floor + ')'; }
+    else { status = 'green'; detail = 'Clear: 2-wk avg $' + avg.toFixed(2) + ' (floor $' + t.floor + ')'; }
+    triggers.push({ label: t.label, status, detail });
+  });
+
+  const min2 = new Date(latest); min2.setDate(min2.getDate() - 14);
+  const recent = usda.filter(r => r.date >= min2 && r.date <= latest);
+  const recentAvg = recent.length ? recent.reduce((a,b) => a + b.midpoint, 0) / recent.length : null;
+  const lyMin = new Date(min2); lyMin.setFullYear(lyMin.getFullYear() - 1);
+  const lyMax = new Date(latest); lyMax.setFullYear(lyMax.getFullYear() - 1);
+  const lastYear = usda.filter(r => r.date >= lyMin && r.date <= lyMax);
+  const lastYearAvg = lastYear.length ? lastYear.reduce((a,b) => a + b.midpoint, 0) / lastYear.length : null;
+
+  if (recentAvg && lastYearAvg) {
+    const drop = (recentAvg / lastYearAvg - 1) * 100;
+    let status, detail;
+    if (drop < -25) { status = 'red'; detail = 'Triggered: 2-wk avg ' + drop.toFixed(1) + '% vs same window prior season'; }
+    else if (drop < -15) { status = 'yellow'; detail = 'Caution: 2-wk avg ' + drop.toFixed(1) + '% vs same window prior season'; }
+    else { status = 'green'; detail = 'Clear: 2-wk avg ' + (drop >= 0 ? '+' : '') + drop.toFixed(1) + '% vs same window prior season'; }
+    triggers.push({ label: 'YoY 2-wk avg movement', status, detail });
+  } else {
+    triggers.push({ label: 'YoY 2-wk avg movement', status: 'gray', detail: 'Need data spanning two seasons' });
+  }
+
+  list.innerHTML = triggers.map(t =>
+    '<div class="trigger">' +
+    '<div class="trigger-label">' + t.label + '<div style="font-size: 11px; color: var(--c-muted);">' + t.detail + '</div></div>' +
+    '<div class="trigger-status ' + t.status + '">' +
+      (t.status === 'red' ? 'TRIGGERED' : t.status === 'yellow' ? 'WATCH' : t.status === 'green' ? 'CLEAR' : 'N/A') +
+    '</div></div>'
+  ).join('');
+}
+
+function renderTable(vid, usda) {
+  const sizeFilter = document.getElementById('size-filter').value;
+  const tbody = document.querySelector('#liq-table tbody');
+  const dated = vid.filter(r => r.date);
+  const undated = vid.filter(r => !r.date);
+  const sortedDated = dated.sort((a,b) => b.date - a.date).slice(0, 100);
+  const fill = Math.max(0, 100 - sortedDated.length);
+  const sortedUndated = undated.sort((a,b) => b.sale - a.sale).slice(0, fill);
+  const rows = [...sortedDated, ...sortedUndated];
+
+  tbody.innerHTML = rows.map(r => {
+    const usdaPx = r.date ? usdaAvgOnDate(usda, r.date, r.usdaBucket, sizeFilter, 7) : null;
+    const basis = usdaPx ? r.perBox - usdaPx : null;
+    const basisPct = usdaPx ? (r.perBox / usdaPx - 1) * 100 : null;
+    const basisClass = basis == null ? '' : basis >= 0 ? 'pos' : 'neg';
+    return '<tr>' +
+      '<td>' + (r.date ? fmtD(r.date) : '—') + '</td>' +
+      '<td>' + (r.crop || '') + '</td>' +
+      '<td>' + (r.usdaBucket || '') + '</td>' +
+      '<td>' + (r.size || '') + '</td>' +
+      '<td class="num">' + r.boxes.toLocaleString() + '</td>' +
+      '<td class="num">$' + r.perBox.toFixed(2) + '</td>' +
+      '<td class="num">' + (usdaPx ? '$' + usdaPx.toFixed(2) : '—') + '</td>' +
+      '<td class="num ' + basisClass + '">' + (basis == null ? '—' : (basis >= 0 ? '+' : '') + '$' + basis.toFixed(2)) + '</td>' +
+      '<td class="num ' + basisClass + '">' + (basisPct == null ? '—' : (basisPct >= 0 ? '+' : '') + basisPct.toFixed(1) + '%') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+</script>
+
+</body>
+</html>
