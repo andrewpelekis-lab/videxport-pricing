@@ -255,6 +255,10 @@
         </div>
       </div>
       <div class="wx-ts" id="wx-updated"></div>
+      <div style="margin-top:14px; border-top:1px solid var(--c-border); padding-top:12px;">
+        <div style="font-size:12px; font-weight:500; color:var(--c-accent); margin-bottom:6px;">Crop Stress Risk &mdash; Hermosillo growing region</div>
+        <div id="crop-risk-list"><div class="wx-spinner" style="padding:6px 0;">Loading risk assessment&hellip;</div></div>
+      </div>
     </div>
     <div class="chart-card" style="margin-bottom: 0;">
       <h2>Growing Degree Days &mdash; Hermosillo, Sonora</h2>
@@ -262,6 +266,13 @@
       <div class="chart-wrap"><canvas id="gddChart" role="img" aria-label="Growing degree days by year"></canvas></div>
       <div id="gdd-loading" style="font-size:12px; color:var(--c-muted); padding: 8px 0; display:none;">Loading historical weather data&hellip;</div>
     </div>
+  </div>
+
+  <div class="chart-card" id="forecast-card">
+    <h2>14-Day Forecast &mdash; Hermosillo, Sonora</h2>
+    <div class="desc">Daily high/low temperature (&deg;F) and precipitation probability. Dashed lines: frost advisory at 36&deg;F and heat stress at 95&deg;F.</div>
+    <div class="chart-wrap"><canvas id="forecastChart" role="img" aria-label="14-day weather forecast for Hermosillo"></canvas></div>
+    <div id="forecast-loading" style="font-size:12px;color:var(--c-muted);padding:8px 0;">Loading forecast&hellip;</div>
   </div>
 
   <div id="main-content" style="display: none;">
@@ -352,9 +363,11 @@ const NOGALES_LOC    = { lat: 31.34, lon: -110.94 };
 const HERMOSILLO_LOC = { lat: 29.07, lon: -110.95 };
 const GDD_BASE = 50; // °F base temperature for grape GDD
 
-let wxHistorical = null;  // parsed daily records [{date,tmax,tmin,precip,gdd}]
+let wxHistorical = null;   // parsed daily records [{date,tmax,tmin,precip,gdd}]
+let wxForecast   = null;   // 14-day forecast [{date,tmax,tmin,precip,precipProb,code}]
 let showWxOverlay = false;
 let gddChartInst = null;
+let forecastChartInst = null;
 
 const WMO_LABEL = {
   0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
@@ -367,6 +380,9 @@ const WMO_LABEL = {
 };
 
 async function initWeather() {
+  const fmt = d => d.toISOString().slice(0, 10);
+
+  // ── Live current conditions (both stations) ──────────────────────────
   const currentUrl = (lat, lon) =>
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m` +
@@ -376,40 +392,63 @@ async function initWeather() {
     fetch(currentUrl(NOGALES_LOC.lat, NOGALES_LOC.lon)),
     fetch(currentUrl(HERMOSILLO_LOC.lat, HERMOSILLO_LOC.lon)),
   ]);
-
   const toJson = async r => (r.status === 'fulfilled' && r.value.ok) ? r.value.json() : null;
   renderLiveStation(await toJson(nRes), document.getElementById('wx-nogales'));
   renderLiveStation(await toJson(hRes), document.getElementById('wx-hermosillo'));
   document.getElementById('wx-updated').textContent =
     'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-  // Historical daily data for GDD + price chart overlay
+  // ── 14-day forecast (Hermosillo) ──────────────────────────────────────
+  try {
+    const fUrl = `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${HERMOSILLO_LOC.lat}&longitude=${HERMOSILLO_LOC.lon}` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode` +
+      `&forecast_days=14&temperature_unit=fahrenheit`;
+    const fRes = await fetch(fUrl);
+    if (!fRes.ok) throw new Error('HTTP ' + fRes.status);
+    const fJson = await fRes.json();
+    wxForecast = fJson.daily.time.map((t, i) => ({
+      date: new Date(t + 'T00:00:00'),
+      tmax: fJson.daily.temperature_2m_max[i],
+      tmin: fJson.daily.temperature_2m_min[i],
+      precip: fJson.daily.precipitation_sum[i],
+      precipProb: fJson.daily.precipitation_probability_max[i],
+      code: fJson.daily.weathercode[i],
+    }));
+    document.getElementById('forecast-loading').style.display = 'none';
+    renderForecastChart();
+  } catch (e) {
+    document.getElementById('forecast-loading').textContent = 'Forecast unavailable.';
+  }
+
+  // ── 3-year historical archive (Hermosillo) — GDD + overlay + risk ─────
   document.getElementById('gdd-loading').style.display = 'block';
   try {
     const endDate = new Date(); endDate.setDate(endDate.getDate() - 1);
     const startDate = new Date(endDate); startDate.setFullYear(startDate.getFullYear() - 3);
-    const fmt = d => d.toISOString().slice(0, 10);
-    const url = `https://archive-api.open-meteo.com/v1/archive` +
+    const hUrl = `https://archive-api.open-meteo.com/v1/archive` +
       `?latitude=${HERMOSILLO_LOC.lat}&longitude=${HERMOSILLO_LOC.lon}` +
       `&start_date=${fmt(startDate)}&end_date=${fmt(endDate)}` +
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    wxHistorical = json.daily.time.map((t, i) => {
-      const tmax = json.daily.temperature_2m_max[i];
-      const tmin = json.daily.temperature_2m_min[i];
+    const hRes = await fetch(hUrl);
+    if (!hRes.ok) throw new Error('HTTP ' + hRes.status);
+    const hJson = await hRes.json();
+    wxHistorical = hJson.daily.time.map((t, i) => {
+      const tmax = hJson.daily.temperature_2m_max[i];
+      const tmin = hJson.daily.temperature_2m_min[i];
       return {
         date: new Date(t + 'T00:00:00'),
         tmax, tmin,
-        precip: json.daily.precipitation_sum[i],
+        precip: hJson.daily.precipitation_sum[i],
         gdd: (tmax != null && tmin != null) ? Math.max(0, (tmax + tmin) / 2 - GDD_BASE) : 0,
       };
     });
     document.getElementById('gdd-loading').style.display = 'none';
     renderGDDChart();
+    renderCropRisk();
   } catch (e) {
     document.getElementById('gdd-loading').textContent = 'Historical weather data unavailable.';
+    document.getElementById('crop-risk-list').innerHTML = '<div class="wx-err">Risk data unavailable</div>';
   }
 }
 
@@ -484,6 +523,198 @@ function renderGDDChart() {
       interaction: { mode: 'nearest', intersect: false },
     }
   });
+}
+
+function renderForecastChart() {
+  if (!wxForecast || wxForecast.length === 0) return;
+  const canvas = document.getElementById('forecastChart');
+  if (!canvas) return;
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  const labels = wxForecast.map(r =>
+    r.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+  // Color data points red if tmin < 32 (frost) or tmax > 95 (heat stress)
+  const hiPointColor = wxForecast.map(r => (r.tmax != null && r.tmax >= 95) ? '#A32D2D' : '#D85A30');
+  const loPointColor = wxForecast.map(r => (r.tmin != null && r.tmin < 32) ? '#534AB7' : '#185FA5');
+
+  const datasets = [
+    {
+      label: 'High °F',
+      data: wxForecast.map(r => r.tmax),
+      borderColor: '#D85A30', backgroundColor: 'rgba(216,90,48,0.10)',
+      pointBackgroundColor: hiPointColor, pointRadius: 5,
+      borderWidth: 2, tension: 0.3, fill: '+1',
+    },
+    {
+      label: 'Low °F',
+      data: wxForecast.map(r => r.tmin),
+      borderColor: '#185FA5', backgroundColor: 'rgba(24,95,165,0.06)',
+      pointBackgroundColor: loPointColor, pointRadius: 5,
+      borderWidth: 2, tension: 0.3, fill: false,
+    },
+    {
+      label: 'Frost advisory (36°F)',
+      data: wxForecast.map(() => 36),
+      borderColor: 'rgba(83,74,183,0.45)', backgroundColor: 'transparent',
+      borderDash: [5, 4], pointRadius: 0, borderWidth: 1.2,
+      fill: false,
+    },
+    {
+      label: 'Heat stress (95°F)',
+      data: wxForecast.map(() => 95),
+      borderColor: 'rgba(163,45,45,0.45)', backgroundColor: 'transparent',
+      borderDash: [5, 4], pointRadius: 0, borderWidth: 1.2,
+      fill: false,
+    },
+    {
+      label: 'Precip Prob %',
+      data: wxForecast.map(r => r.precipProb),
+      type: 'bar',
+      borderColor: 'rgba(83,74,183,0.5)',
+      backgroundColor: 'rgba(83,74,183,0.2)',
+      yAxisID: 'y2',
+    },
+  ];
+
+  forecastChartInst = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { maxRotation: 45, minRotation: 30 } },
+        y: { title: { display: true, text: 'Temp °F' } },
+        y2: {
+          display: true, position: 'right',
+          min: 0, max: 100,
+          title: { display: true, text: 'Precip Prob %' },
+          grid: { drawOnChartArea: false },
+          ticks: { callback: v => v + '%' },
+        },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: {
+            label: c => c.dataset.yAxisID === 'y2'
+              ? `Precip prob: ${c.parsed.y}%`
+              : `${c.dataset.label}: ${c.parsed.y != null ? Math.round(c.parsed.y) + '°F' : '—'}`,
+          },
+        },
+      },
+    }
+  });
+}
+
+function renderCropRisk() {
+  const list = document.getElementById('crop-risk-list');
+  if (!list) return;
+  if (!wxHistorical) {
+    list.innerHTML = '<div class="wx-spinner">Awaiting historical data…</div>';
+    return;
+  }
+
+  const now = new Date();
+  const d30 = new Date(now); d30.setDate(d30.getDate() - 30);
+  const recent = wxHistorical.filter(r => r.date >= d30);
+
+  // ── Frost risk ───────────────────────────────────────────────────────
+  const recentFrost = recent.filter(r => r.tmin != null && r.tmin < 32).length;
+  const fcastFrost  = wxForecast ? wxForecast.filter(r => r.tmin != null && r.tmin < 36).length : null;
+  let frostLevel, frostDetail;
+  if (recentFrost > 0 && fcastFrost) {
+    frostLevel = 'red';
+    frostDetail = `${recentFrost} sub-32°F night(s) last 30 days · ${fcastFrost} frost-advisory night(s) in forecast`;
+  } else if (recentFrost > 0) {
+    frostLevel = 'yellow';
+    frostDetail = `${recentFrost} sub-32°F night(s) last 30 days · no frost in 14-day forecast`;
+  } else if (fcastFrost) {
+    frostLevel = 'yellow';
+    frostDetail = `No recent frost · ${fcastFrost} frost-advisory night(s) (< 36°F) forecast`;
+  } else {
+    frostLevel = 'green';
+    frostDetail = 'No frost events in last 30 days or 14-day forecast';
+  }
+
+  // ── Heat stress ──────────────────────────────────────────────────────
+  const HEAT = 95;
+  const recentHeat = recent.filter(r => r.tmax != null && r.tmax >= HEAT).length;
+  const fcastHeat  = wxForecast ? wxForecast.filter(r => r.tmax != null && r.tmax >= HEAT).length : null;
+  let heatLevel, heatDetail;
+  if (recentHeat >= 5 || (fcastHeat != null && fcastHeat >= 3)) {
+    heatLevel = 'red';
+    heatDetail = `${recentHeat} heat-stress day(s) ≥ 95°F last 30 days` +
+      (fcastHeat != null ? ` · ${fcastHeat} day(s) in forecast` : '');
+  } else if (recentHeat >= 2 || (fcastHeat != null && fcastHeat >= 1)) {
+    heatLevel = 'yellow';
+    heatDetail = `${recentHeat} heat-stress day(s) ≥ 95°F last 30 days` +
+      (fcastHeat != null ? ` · ${fcastHeat} day(s) in forecast` : '');
+  } else {
+    heatLevel = 'green';
+    heatDetail = 'No significant heat-stress events ≥ 95°F';
+  }
+
+  // ── Precipitation deficit ────────────────────────────────────────────
+  const recentMm = recent.reduce((a, r) => a + (r.precip || 0), 0);
+  // Compute same-window average from prior years in archive
+  const baselines = [];
+  for (let yr = 1; yr <= 3; yr++) {
+    const yStart = new Date(d30); yStart.setFullYear(yStart.getFullYear() - yr);
+    const yEnd   = new Date(now);  yEnd.setFullYear(yEnd.getFullYear() - yr);
+    const yTotal = wxHistorical
+      .filter(r => r.date >= yStart && r.date <= yEnd)
+      .reduce((a, r) => a + (r.precip || 0), 0);
+    baselines.push(yTotal);
+  }
+  const baseline = baselines.length ? baselines.reduce((a, b) => a + b, 0) / baselines.length : null;
+  let precipLevel, precipDetail;
+  if (baseline == null || baseline < 5) {
+    precipLevel = 'green';
+    precipDetail = `${recentMm.toFixed(1)} mm last 30 days (irrigated region — rainfall secondary)`;
+  } else {
+    const pct = (recentMm / baseline - 1) * 100;
+    if (pct < -60) {
+      precipLevel = 'red';
+      precipDetail = `Severe deficit: ${recentMm.toFixed(0)} mm vs ${baseline.toFixed(0)} mm baseline (${pct.toFixed(0)}%)`;
+    } else if (pct < -30) {
+      precipLevel = 'yellow';
+      precipDetail = `Below-normal: ${recentMm.toFixed(0)} mm vs ${baseline.toFixed(0)} mm baseline (${pct.toFixed(0)}%)`;
+    } else if (pct > 60) {
+      precipLevel = 'yellow';
+      precipDetail = `Excess rainfall: ${recentMm.toFixed(0)} mm vs ${baseline.toFixed(0)} mm baseline (+${pct.toFixed(0)}%)`;
+    } else {
+      precipLevel = 'green';
+      precipDetail = `Normal: ${recentMm.toFixed(0)} mm vs ${baseline.toFixed(0)} mm baseline (${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%)`;
+    }
+  }
+
+  // ── Composite ────────────────────────────────────────────────────────
+  const levels = [frostLevel, heatLevel, precipLevel];
+  const composite = levels.includes('red') ? 'red' : levels.includes('yellow') ? 'yellow' : 'green';
+  const compositeDetail = composite === 'red'
+    ? 'One or more high-risk conditions detected — review crop exposure'
+    : composite === 'yellow'
+    ? 'Elevated stress risk — monitor developing conditions'
+    : 'All indicators normal — no active crop stress signals';
+
+  const risks = [
+    { label: 'Frost Risk',         level: frostLevel,   detail: frostDetail   },
+    { label: 'Heat Stress',        level: heatLevel,    detail: heatDetail    },
+    { label: 'Precipitation',      level: precipLevel,  detail: precipDetail  },
+    { label: 'Overall Assessment', level: composite,    detail: compositeDetail },
+  ];
+  const badge = { red: 'HIGH', yellow: 'WATCH', green: 'LOW', gray: 'N/A' };
+
+  list.innerHTML = risks.map(r =>
+    `<div class="trigger">` +
+    `<div class="trigger-label">${r.label}` +
+    `<div style="font-size:11px;color:var(--c-muted);">${r.detail}</div></div>` +
+    `<div class="trigger-status ${r.level}">${badge[r.level] || 'N/A'}</div>` +
+    `</div>`
+  ).join('');
 }
 
 function toggleWeatherOverlay() {
