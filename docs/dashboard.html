@@ -184,6 +184,103 @@
   }
   .overlay-btn.active { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
 
+  /* ── Deal Status Panel ────────────────────────────────────────── */
+  .deal-status-section { margin-bottom: 18px; }
+  .deal-status-header { margin-bottom: 10px; }
+  .deal-status-title { font-size: 16px; font-weight: 500; color: var(--c-accent); margin: 0 0 2px; }
+  .deal-status-sub { font-size: 12px; color: var(--c-muted); }
+  .deal-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .deal-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-left: 4px solid var(--c-muted);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .deal-card.deal-green  { border-left-color: var(--c-good); }
+  .deal-card.deal-yellow { border-left-color: var(--c-warn); }
+  .deal-card.deal-red    { border-left-color: var(--c-bad);  }
+  .deal-card.deal-gray   { border-left-color: var(--c-muted); }
+  .deal-label {
+    font-size: 11px; color: var(--c-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px; padding-right: 60px;
+  }
+  .deal-metric { font-size: 22px; font-weight: 500; color: var(--c-text); margin-bottom: 4px; line-height: 1.1; }
+  .deal-detail { font-size: 11px; color: var(--c-muted); line-height: 1.4; min-height: 30px; }
+  .deal-badge {
+    position: absolute; top: 12px; right: 14px;
+    font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 10px;
+  }
+  .deal-badge-green  { background: #e6f4ee; color: var(--c-good); }
+  .deal-badge-yellow { background: #faf0d9; color: var(--c-warn); }
+  .deal-badge-red    { background: #fae6e6; color: var(--c-bad);  }
+  .deal-badge-gray   { background: #efefec; color: var(--c-muted); }
+  @media (max-width: 900px) { .deal-status-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── Crop Cycle Calendar ──────────────────────────────────────── */
+  .crop-cycle-card {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .crop-cycle-card h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--c-accent); }
+  .crop-cycle-card .desc { font-size: 12px; color: var(--c-muted); margin-bottom: 14px; }
+  .cycle-legend {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    font-size: 11px; color: var(--c-muted); margin-bottom: 14px;
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 2px; display: inline-block; }
+  .cycle-chart { position: relative; }
+  .cycle-header-row, .cycle-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 8px;
+    align-items: center;
+  }
+  .cycle-header-row { margin-bottom: 8px; }
+  .cycle-row { margin-bottom: 4px; }
+  .cycle-month-labels {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px;
+    font-size: 10px; color: var(--c-muted); text-align: center;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .cycle-label { font-size: 12px; font-weight: 500; color: var(--c-text); }
+  .cycle-status { font-size: 10px; color: var(--c-muted); font-weight: 400; margin-top: 2px; }
+  .cycle-bar { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; height: 28px; }
+  .cycle-cell { border-radius: 2px; cursor: help; background: #efefec; transition: opacity 0.15s; }
+  .cycle-cell:hover { opacity: 0.85; }
+  .cycle-cell.planting  { background: #185FA5; }
+  .cycle-cell.growing   { background: #1D9E75; }
+  .cycle-cell.harvest   { background: #D85A30; }
+  .cycle-cell.pruning   { background: #BA7517; }
+  .cycle-cell.offseason { background: #C0BFB8; }
+  .cycle-today-marker {
+    position: absolute; top: 28px; bottom: 0;
+    width: 2px; background: #A32D2D;
+    pointer-events: none; z-index: 5;
+  }
+  .cycle-today-label {
+    position: absolute; top: -26px; left: 4px;
+    font-size: 10px; font-weight: 500; color: #A32D2D;
+    background: #fff; border: 1px solid #A32D2D;
+    padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  }
+  .paca-note {
+    font-size: 11px; color: var(--c-muted); margin-top: 14px;
+    padding-top: 12px; border-top: 1px solid var(--c-border);
+  }
+  .paca-note strong { color: var(--c-accent); }
+
   .empty-state {
     background: var(--c-card);
     border: 1px solid var(--c-border);
@@ -231,6 +328,71 @@
   </div>
 
   <div id="debug" class="debug"></div>
+
+  <div class="deal-status-section" id="deal-status-section">
+    <div class="deal-status-header">
+      <h2 class="deal-status-title">Deal Status &mdash; Videxport Facility</h2>
+      <div class="deal-status-sub">At-a-glance health check on prices, deliveries, crops, and PACA collateral coverage</div>
+    </div>
+    <div class="deal-status-grid" id="deal-status-grid">
+      <div class="deal-card deal-gray">
+        <div class="deal-label">Price Stability</div>
+        <div class="deal-metric">&mdash;</div>
+        <div class="deal-detail">Awaiting liquidation data&hellip;</div>
+        <div class="deal-badge deal-badge-gray">N/A</div>
+      </div>
+      <div class="deal-card deal-gray">
+        <div class="deal-label">Delivery Flow</div>
+        <div class="deal-metric">&mdash;</div>
+        <div class="deal-detail">Awaiting liquidation data&hellip;</div>
+        <div class="deal-badge deal-badge-gray">N/A</div>
+      </div>
+      <div class="deal-card deal-gray">
+        <div class="deal-label">Crop Health</div>
+        <div class="deal-metric">&mdash;</div>
+        <div class="deal-detail">Loading weather model&hellip;</div>
+        <div class="deal-badge deal-badge-gray">N/A</div>
+      </div>
+      <div class="deal-card deal-green">
+        <div class="deal-label">PACA Coverage</div>
+        <div class="deal-metric">Active</div>
+        <div class="deal-detail">Statutory super-priority trust under PACA &sect;499e(c) applies to all unpaid produce sales</div>
+        <div class="deal-badge deal-badge-green">SECURED</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="crop-cycle-card">
+    <h2>Seasonal Crop Cycle &mdash; Videxport Production Calendar</h2>
+    <div class="desc">Annual phase by crop in the Sonora growing region. Vertical line marks today's position in the calendar year. Orange cells are revenue-producing harvest windows.</div>
+
+    <div class="cycle-legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#185FA5"></span>Planting</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#1D9E75"></span>Growing / Vegetative</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#D85A30"></span>Harvest (revenue window)</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#BA7517"></span>Pruning / Dormant Mgmt</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#C0BFB8"></span>Off-season</span>
+    </div>
+
+    <div class="cycle-chart" id="cycle-chart">
+      <div class="cycle-header-row">
+        <div></div>
+        <div class="cycle-month-labels">
+          <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span>
+          <span>May</span><span>Jun</span><span>Jul</span><span>Aug</span>
+          <span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+        </div>
+      </div>
+      <div id="cycle-rows"></div>
+      <div id="cycle-today-marker" class="cycle-today-marker">
+        <div class="cycle-today-label" id="cycle-today-label">Today</div>
+      </div>
+    </div>
+
+    <div class="paca-note">
+      <strong>PACA Trust</strong> &mdash; Under the Perishable Agricultural Commodities Act, all proceeds and accounts receivable from unpaid produce sales are held in a statutory trust for the benefit of the seller (and its lender by assignment), with priority ahead of all other secured creditors. This gives the facility super-priority collateral that supersedes Article 9 UCC liens.
+    </div>
+  </div>
 
   <div class="controls" id="controls" style="display: none;">
     <div><label>Crop</label><select id="crop-filter"></select></div>
@@ -417,6 +579,7 @@ async function initWeather() {
     }));
     document.getElementById('forecast-loading').style.display = 'none';
     renderForecastChart();
+    renderDealStatus();
   } catch (e) {
     document.getElementById('forecast-loading').textContent = 'Forecast unavailable.';
   }
@@ -446,6 +609,7 @@ async function initWeather() {
     document.getElementById('gdd-loading').style.display = 'none';
     renderGDDChart();
     renderCropRisk();
+    renderDealStatus();
   } catch (e) {
     document.getElementById('gdd-loading').textContent = 'Historical weather data unavailable.';
     document.getElementById('crop-risk-list').innerHTML = '<div class="wx-err">Risk data unavailable</div>';
@@ -728,6 +892,281 @@ function toggleWeatherOverlay() {
 }
 // ── End Weather ───────────────────────────────────────────────────────────
 
+// ── Crop Cycle Calendar ───────────────────────────────────────────────────
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Sonora growing-region phenology by crop. Each entry: [phase-class, phase-label]
+const CROP_CYCLE = {
+  'Grape (table)': [
+    ['pruning',   'Pruning / Dormant'],
+    ['growing',   'Bud break'],
+    ['growing',   'Flowering'],
+    ['growing',   'Berry development'],
+    ['harvest',   'Harvest peak'],
+    ['harvest',   'Harvest'],
+    ['harvest',   'Late harvest'],
+    ['offseason', 'Post-harvest'],
+    ['offseason', 'Dormancy'],
+    ['offseason', 'Dormancy'],
+    ['pruning',   'Pruning'],
+    ['pruning',   'Pruning'],
+  ],
+  'Watermelon': [
+    ['growing',   'Vegetative'],
+    ['growing',   'Vegetative'],
+    ['growing',   'Fruit set'],
+    ['harvest',   'Harvest'],
+    ['harvest',   'Harvest peak'],
+    ['harvest',   'Late harvest'],
+    ['offseason', 'Off-season'],
+    ['offseason', 'Off-season'],
+    ['offseason', 'Off-season'],
+    ['planting',  'Planting'],
+    ['planting',  'Germination'],
+    ['growing',   'Vegetative'],
+  ],
+  'Honeydew': [
+    ['growing',   'Vegetative / Fruiting'],
+    ['harvest',   'Harvest'],
+    ['harvest',   'Harvest peak'],
+    ['harvest',   'Harvest'],
+    ['harvest',   'Late harvest'],
+    ['offseason', 'Off-season'],
+    ['offseason', 'Off-season'],
+    ['offseason', 'Off-season'],
+    ['offseason', 'Off-season'],
+    ['planting',  'Planting'],
+    ['planting',  'Germination'],
+    ['growing',   'Vegetative'],
+  ],
+  'Bell Pepper': [
+    ['harvest',   'Harvest'],
+    ['harvest',   'Harvest peak'],
+    ['harvest',   'Harvest'],
+    ['harvest',   'Harvest'],
+    ['harvest',   'Late harvest'],
+    ['offseason', 'Off-season'],
+    ['offseason', 'Off-season'],
+    ['planting',  'Transplant'],
+    ['planting',  'Establishment'],
+    ['growing',   'Vegetative'],
+    ['growing',   'Flowering / Set'],
+    ['harvest',   'Harvest begins'],
+  ],
+  'Asparagus': [
+    ['offseason', 'Dormancy'],
+    ['harvest',   'Spear harvest'],
+    ['harvest',   'Harvest peak'],
+    ['harvest',   'Spear harvest'],
+    ['growing',   'Fern growth'],
+    ['growing',   'Fern growth'],
+    ['growing',   'Fern growth'],
+    ['growing',   'Fern growth'],
+    ['growing',   'Fern growth'],
+    ['growing',   'Senescence'],
+    ['offseason', 'Dormancy'],
+    ['offseason', 'Dormancy'],
+  ],
+};
+
+function renderCropCycle() {
+  const today = new Date();
+  const month = today.getMonth();
+  const rowsEl = document.getElementById('cycle-rows');
+  if (!rowsEl) return;
+
+  rowsEl.innerHTML = Object.entries(CROP_CYCLE).map(([crop, months]) => {
+    const current = months[month];
+    const cells = months.map((m, i) =>
+      `<div class="cycle-cell ${m[0]}" title="${MONTH_NAMES[i]}: ${m[1]}"></div>`
+    ).join('');
+    return `<div class="cycle-row">` +
+      `<div class="cycle-label">${crop}<div class="cycle-status">Now: ${current[1]}</div></div>` +
+      `<div class="cycle-bar">${cells}</div>` +
+      `</div>`;
+  }).join('');
+
+  positionTodayMarker();
+}
+
+function positionTodayMarker() {
+  const marker = document.getElementById('cycle-today-marker');
+  const chart  = document.getElementById('cycle-chart');
+  if (!marker || !chart) return;
+  const firstBar = chart.querySelector('#cycle-rows .cycle-bar');
+  if (!firstBar) return;
+
+  const today = new Date();
+  const yearStart = new Date(today.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((today - yearStart) / 86400000) + 1;
+  const isLeap = (today.getFullYear() % 4 === 0 && today.getFullYear() % 100 !== 0) || today.getFullYear() % 400 === 0;
+  const yearLen = isLeap ? 366 : 365;
+
+  const chartRect = chart.getBoundingClientRect();
+  const barRect   = firstBar.getBoundingClientRect();
+  const offset = (barRect.left - chartRect.left) + (dayOfYear / yearLen) * barRect.width;
+
+  marker.style.left = offset + 'px';
+  document.getElementById('cycle-today-label').textContent =
+    'Today · ' + today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+window.addEventListener('resize', positionTodayMarker);
+// ── End Crop Cycle ────────────────────────────────────────────────────────
+
+// ── Deal Status (investor headline) ───────────────────────────────────────
+function renderDealStatus() {
+  const grid = document.getElementById('deal-status-grid');
+  if (!grid) return;
+
+  const now = new Date();
+  const d30 = new Date(now); d30.setDate(d30.getDate() - 30);
+  const BADGE = { green: 'HEALTHY', yellow: 'WATCH', red: 'ALERT', gray: 'N/A' };
+
+  const cards = [];
+
+  // 1. Price Stability — recent 30d weighted avg vs same window prior year
+  if (VID.length > 0) {
+    const recent = VID.filter(r => r.date && r.date >= d30);
+    const lyEnd   = new Date(now); lyEnd.setFullYear(lyEnd.getFullYear() - 1);
+    const lyStart = new Date(lyEnd); lyStart.setDate(lyStart.getDate() - 30);
+    const prior  = VID.filter(r => r.date && r.date >= lyStart && r.date <= lyEnd);
+
+    const recentAvg = weightedAvg(recent);
+    const priorAvg  = weightedAvg(prior);
+    let status, metric, detail;
+    if (recentAvg > 0 && priorAvg > 0) {
+      const pct = (recentAvg / priorAvg - 1) * 100;
+      metric = '$' + recentAvg.toFixed(2) + '/box';
+      detail = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% YoY · 30-day weighted avg (prior $${priorAvg.toFixed(2)})`;
+      status = pct >= -10 ? 'green' : pct >= -25 ? 'yellow' : 'red';
+    } else if (recentAvg > 0) {
+      metric = '$' + recentAvg.toFixed(2) + '/box';
+      detail = '30-day weighted avg · no prior-year comparison window';
+      status = 'gray';
+    } else {
+      const allAvg = weightedAvg(VID);
+      metric = allAvg ? '$' + allAvg.toFixed(2) + '/box' : '—';
+      detail = 'Historical weighted avg · no liquidations in last 30 days';
+      status = 'gray';
+    }
+    cards.push({ label: 'Price Stability', metric, detail, status });
+  } else {
+    cards.push({ label: 'Price Stability', metric: '—', detail: 'Awaiting Videxport liquidation data', status: 'gray' });
+  }
+
+  // 2. Delivery Flow — days since last liquidation + 30d volume
+  if (VID.length > 0) {
+    const dated = VID.filter(r => r.date);
+    const latest = dated.length ? dated.reduce((a, b) => a.date > b.date ? a : b) : null;
+    const recent = VID.filter(r => r.date && r.date >= d30);
+    const recentBoxes = recent.reduce((a, r) => a + (r.boxes || 0), 0);
+    const recentRev   = recent.reduce((a, r) => a + (r.sale  || 0), 0);
+    let status, metric, detail;
+    if (latest) {
+      const daysSince = Math.floor((now - latest.date) / 86400000);
+      metric = recentBoxes.toLocaleString() + ' boxes';
+      detail = `Last delivery ${daysSince}d ago · $${(recentRev/1000).toFixed(0)}k revenue (30d)`;
+      status = daysSince <= 14 ? 'green' : daysSince <= 30 ? 'yellow' : 'red';
+    } else {
+      metric = '—';
+      detail = 'No dated deliveries in dataset';
+      status = 'gray';
+    }
+    cards.push({ label: 'Delivery Flow', metric, detail, status });
+  } else {
+    cards.push({ label: 'Delivery Flow', metric: '—', detail: 'Awaiting Videxport liquidation data', status: 'gray' });
+  }
+
+  // 3. Crop Health — composite from weather model
+  if (wxHistorical) {
+    const recentWx = wxHistorical.filter(r => r.date >= d30);
+    const frostR = recentWx.filter(r => r.tmin != null && r.tmin < 32).length;
+    const heatR  = recentWx.filter(r => r.tmax != null && r.tmax >= 95).length;
+    const frostF = wxForecast ? wxForecast.filter(r => r.tmin != null && r.tmin < 36).length : 0;
+    const heatF  = wxForecast ? wxForecast.filter(r => r.tmax != null && r.tmax >= 95).length : 0;
+
+    const hasRed    = (frostR > 0 && frostF > 0) || heatR >= 5 || heatF >= 3;
+    const hasYellow = frostR > 0 || frostF > 0 || heatR >= 2 || heatF >= 1;
+    const status = hasRed ? 'red' : hasYellow ? 'yellow' : 'green';
+    const metric = status === 'green' ? 'Normal' : status === 'yellow' ? 'Watch' : 'Stressed';
+    const detail = `${frostR + frostF} frost · ${heatR + heatF} heat-stress days (30d hist + 14d forecast)`;
+    cards.push({ label: 'Crop Health', metric, detail, status });
+  } else {
+    cards.push({ label: 'Crop Health', metric: '—', detail: 'Loading Hermosillo weather model…', status: 'gray' });
+  }
+
+  // 4. PACA Coverage — 30d trust amount (gross unpaid produce sales)
+  const pacaAmt = VID.length > 0
+    ? VID.filter(r => r.date && r.date >= d30).reduce((a, r) => a + (r.sale || 0), 0)
+    : 0;
+  if (pacaAmt > 0) {
+    cards.push({
+      label: 'PACA Coverage',
+      metric: '$' + Math.round(pacaAmt / 1000).toLocaleString() + 'k',
+      detail: '30-day produce float secured by PACA §499e(c) super-priority statutory trust',
+      status: 'green',
+    });
+  } else {
+    cards.push({
+      label: 'PACA Coverage',
+      metric: 'Active',
+      detail: 'PACA §499e(c) super-priority trust applies to all unpaid produce sales',
+      status: 'green',
+    });
+  }
+
+  grid.innerHTML = cards.map(c =>
+    `<div class="deal-card deal-${c.status}">` +
+    `<div class="deal-label">${c.label}</div>` +
+    `<div class="deal-metric">${c.metric}</div>` +
+    `<div class="deal-detail">${c.detail}</div>` +
+    `<div class="deal-badge deal-badge-${c.status}">${BADGE[c.status]}</div>` +
+    `</div>`
+  ).join('');
+}
+// ── End Deal Status ───────────────────────────────────────────────────────
+
+// ── Auto-load data files ──────────────────────────────────────────────────
+async function autoLoadData() {
+  const tryFetch = async (url, handler, statusEl) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return false;
+      const text = await res.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      handler(parsed.data, statusEl);
+      return true;
+    } catch (e) { return false; }
+  };
+
+  await tryFetch('data/usda_master.csv', (rows, statusId) => {
+    USDA = rows.map(parseUSDARow).filter(r => r.date && r.midpoint != null);
+    const dates = USDA.map(r => r.date.getTime());
+    const min = dates.length ? new Date(Math.min.apply(null, dates)) : null;
+    const max = dates.length ? new Date(Math.max.apply(null, dates)) : null;
+    const status = document.getElementById('usda-status');
+    status.textContent = `Auto-loaded ${USDA.length} USDA obs` + (min && max ? ` · ${fmtD(min)} to ${fmtD(max)}` : '');
+    status.classList.add('loaded');
+  }, 'usda-status');
+
+  await tryFetch('data/videxport_liquidations.csv', (rows) => {
+    VID = rows.map(parseVidRow).filter(r => r.boxes > 0 && r.sale > 0);
+    const dates = VID.map(r => r.date ? r.date.getTime() : null).filter(t => t && !isNaN(t));
+    const min = dates.length ? new Date(Math.min.apply(null, dates)) : null;
+    const max = dates.length ? new Date(Math.max.apply(null, dates)) : null;
+    const undated = VID.filter(r => !r.date).length;
+    const status = document.getElementById('vid-status');
+    status.textContent = `Auto-loaded ${VID.length} liquidations` +
+      (min && max ? ` · dated ${fmtD(min)} to ${fmtD(max)}` : '') +
+      (undated ? ` · ${undated} undated` : '');
+    status.classList.add('loaded');
+  }, 'vid-status');
+
+  if (USDA.length > 0) tryRender();
+  renderDealStatus();
+}
+// ── End Auto-load ─────────────────────────────────────────────────────────
+
 const debugEl = document.getElementById('debug');
 function showError(msg, err) {
   console.error(msg, err);
@@ -938,6 +1377,7 @@ function applyFilters() {
   renderBasisDist(vidF, usdaF);
   renderTriggers(vidF, usdaF);
   renderTable(vidF, usdaF);
+  renderDealStatus();
 }
 
 function weightedAvg(rows) {
@@ -1358,7 +1798,10 @@ function renderTable(vid, usda) {
       '</tr>';
   }).join('');
 }
-// Kick off weather fetch immediately on page load
+// Page init — render static content, then async-load data + weather
+renderCropCycle();
+renderDealStatus();
+autoLoadData().catch(e => console.warn('Auto-load failed:', e));
 initWeather().catch(e => console.warn('Weather init failed:', e));
 </script>
 
