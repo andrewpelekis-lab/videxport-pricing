@@ -268,7 +268,7 @@
 
     <div class="chart-card">
       <h2>Price history — USDA Nogales vs Videxport realized</h2>
-      <div class="desc">USDA daily midpoint by variety (solid) vs. Videxport realized $/box (markers). Videxport rows without dates excluded from chart but visible in detail table.</div>
+      <div class="desc">USDA daily midpoint by variety (solid) vs. Videxport realized $/box (markers). Rows without dates are excluded from chart.</div>
       <div class="chart-wrap"><canvas id="priceChart" role="img" aria-label="Time-series of USDA Nogales benchmark prices and Videxport realized prices"></canvas></div>
     </div>
 
@@ -300,24 +300,10 @@
       </div>
     </div>
 
-    <div class="trigger-card" id="trigger-card">
-      <h2>Covenant trigger monitor</h2>
-      <div id="trigger-list"></div>
-    </div>
-
-    <div class="chart-card">
-      <h2>Liquidation detail</h2>
-      <div class="desc">Most recent 100 liquidations with USDA benchmark and computed basis.</div>
-      <div style="max-height: 400px; overflow-y: auto;">
-        <table class="data" id="liq-table">
-          <thead><tr>
-            <th>Date</th><th>Crop</th><th>Variety bucket</th><th>Size</th>
-            <th class="num">Boxes</th><th class="num">Vid $/box</th>
-            <th class="num">USDA mid</th><th class="num">Basis $</th><th class="num">Basis %</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+    <div class="chart-card" id="weather-panel">
+      <h2>Sonora growing region — weather &amp; crop health</h2>
+      <div class="desc">Hermosillo, Sonora (29.07°N, 110.93°W) — principal Videxport vineyard region. Live 7-day history and 14-day forecast via Open-Meteo. Refreshes on each page load.</div>
+      <div id="weather-content" style="color:var(--c-muted);font-size:12px;padding:12px 0">Loading weather data…</div>
     </div>
 
   </div>
@@ -538,8 +524,6 @@ function applyFilters() {
   renderKPIs(vidF, usdaF);
   renderPriceChart(vidF, usdaF);
   renderPriceBridge(vidF, usdaF);
-  renderTriggers(vidF, usdaF);
-  renderTable(vidF, usdaF);
 }
 
 function weightedAvg(rows) {
@@ -1007,91 +991,170 @@ function renderPriceBridge(vid, usda) {
   refreshBridgeDisplay();
 }
 
-function renderTriggers(vid, usda) {
-  const list = document.getElementById('trigger-list');
-  if (usda.length === 0) {
-    list.innerHTML = '<div style="font-size:12px; color: var(--c-muted);">No USDA data in filter</div>';
-    return;
+// ── Weather & crop health ─────────────────────────────────────────────────
+async function loadWeatherData() {
+  const url = 'https://api.open-meteo.com/v1/forecast?' + [
+    'latitude=29.0667', 'longitude=-110.9333',
+    'current=temperature_2m,precipitation,windspeed_10m,relative_humidity_2m',
+    'daily=temperature_2m_max,temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration',
+    'past_days=7', 'forecast_days=14',
+    'timezone=America%2FHermosillo',
+  ].join('&');
+  const content = document.getElementById('weather-content');
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    renderWeatherPanel(await res.json());
+  } catch (err) {
+    if (content) content.innerHTML =
+      '<div style="color:var(--c-muted);font-size:12px;padding:8px 0">Weather data unavailable: ' + err.message + '</div>';
   }
-
-  const triggers = [];
-  const latest = usda.reduce((a,b) => (a.date > b.date ? a : b)).date;
-
-  const triggerSet = [
-    { bucket: 'WHITE SEEDLESS TYPE', floor: 15, label: 'White Seedless 2-wk trailing avg < $15/box' },
-    { bucket: 'FLAME SEEDLESS', floor: 11, label: 'Flame Seedless 2-wk trailing avg < $11/box' },
-    { bucket: 'BLACK SEEDLESS', floor: 18, label: 'Black Seedless 2-wk trailing avg < $18/box' },
-  ];
-
-  triggerSet.forEach(t => {
-    const min = new Date(latest); min.setDate(min.getDate() - 14);
-    const pool = usda.filter(r => r.variety === t.bucket && r.date >= min && r.date <= latest);
-    if (pool.length === 0) {
-      triggers.push({ label: t.label, status: 'gray', detail: 'No recent data for this variety' });
-      return;
-    }
-    const avg = pool.reduce((a, b) => a + b.midpoint, 0) / pool.length;
-    let status, detail;
-    if (avg < t.floor) { status = 'red'; detail = 'Triggered: 2-wk avg $' + avg.toFixed(2) + ' below floor $' + t.floor; }
-    else if (avg < t.floor * 1.2) { status = 'yellow'; detail = 'Approaching: 2-wk avg $' + avg.toFixed(2) + ' (floor $' + t.floor + ')'; }
-    else { status = 'green'; detail = 'Clear: 2-wk avg $' + avg.toFixed(2) + ' (floor $' + t.floor + ')'; }
-    triggers.push({ label: t.label, status, detail });
-  });
-
-  const min2 = new Date(latest); min2.setDate(min2.getDate() - 14);
-  const recent = usda.filter(r => r.date >= min2 && r.date <= latest);
-  const recentAvg = recent.length ? recent.reduce((a,b) => a + b.midpoint, 0) / recent.length : null;
-  const lyMin = new Date(min2); lyMin.setFullYear(lyMin.getFullYear() - 1);
-  const lyMax = new Date(latest); lyMax.setFullYear(lyMax.getFullYear() - 1);
-  const lastYear = usda.filter(r => r.date >= lyMin && r.date <= lyMax);
-  const lastYearAvg = lastYear.length ? lastYear.reduce((a,b) => a + b.midpoint, 0) / lastYear.length : null;
-
-  if (recentAvg && lastYearAvg) {
-    const drop = (recentAvg / lastYearAvg - 1) * 100;
-    let status, detail;
-    if (drop < -25) { status = 'red'; detail = 'Triggered: 2-wk avg ' + drop.toFixed(1) + '% vs same window prior season'; }
-    else if (drop < -15) { status = 'yellow'; detail = 'Caution: 2-wk avg ' + drop.toFixed(1) + '% vs same window prior season'; }
-    else { status = 'green'; detail = 'Clear: 2-wk avg ' + (drop >= 0 ? '+' : '') + drop.toFixed(1) + '% vs same window prior season'; }
-    triggers.push({ label: 'YoY 2-wk avg movement', status, detail });
-  } else {
-    triggers.push({ label: 'YoY 2-wk avg movement', status: 'gray', detail: 'Need data spanning two seasons' });
-  }
-
-  list.innerHTML = triggers.map(t =>
-    '<div class="trigger">' +
-    '<div class="trigger-label">' + t.label + '<div style="font-size: 11px; color: var(--c-muted);">' + t.detail + '</div></div>' +
-    '<div class="trigger-status ' + t.status + '">' +
-      (t.status === 'red' ? 'TRIGGERED' : t.status === 'yellow' ? 'WATCH' : t.status === 'green' ? 'CLEAR' : 'N/A') +
-    '</div></div>'
-  ).join('');
 }
 
-function renderTable(vid, usda) {
-  const tbody = document.querySelector('#liq-table tbody');
-  const dated = vid.filter(r => r.date);
-  const undated = vid.filter(r => !r.date);
-  const sortedDated = dated.sort((a,b) => b.date - a.date).slice(0, 100);
-  const fill = Math.max(0, 100 - sortedDated.length);
-  const sortedUndated = undated.sort((a,b) => b.sale - a.sale).slice(0, fill);
-  const rows = [...sortedDated, ...sortedUndated];
+function renderWeatherPanel(data) {
+  const content = document.getElementById('weather-content');
+  if (!content) return;
 
-  tbody.innerHTML = rows.map(r => {
-    const usdaPx = r.date ? usdaAvgOnDate(usda, r.date, r.usdaBucket, null, 7) : null;
-    const basis = usdaPx ? r.perBox - usdaPx : null;
-    const basisPct = usdaPx ? (r.perBox / usdaPx - 1) * 100 : null;
-    const basisClass = basis == null ? '' : basis >= 0 ? 'pos' : 'neg';
-    return '<tr>' +
-      '<td>' + (r.date ? fmtD(r.date) : '—') + '</td>' +
-      '<td>' + (r.crop || '') + '</td>' +
-      '<td>' + (r.usdaBucket || '') + '</td>' +
-      '<td>' + (r.size || '') + '</td>' +
-      '<td class="num">' + r.boxes.toLocaleString() + '</td>' +
-      '<td class="num">$' + r.perBox.toFixed(2) + '</td>' +
-      '<td class="num">' + (usdaPx ? '$' + usdaPx.toFixed(2) : '—') + '</td>' +
-      '<td class="num ' + basisClass + '">' + (basis == null ? '—' : (basis >= 0 ? '+' : '') + '$' + basis.toFixed(2)) + '</td>' +
-      '<td class="num ' + basisClass + '">' + (basisPct == null ? '—' : (basisPct >= 0 ? '+' : '') + basisPct.toFixed(1) + '%') + '</td>' +
-      '</tr>';
-  }).join('');
+  const curr  = data.current;
+  const daily = data.daily;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayIdx = daily.time.findIndex(t => new Date(t) >= today);
+  const pastSlice = n => daily[n].slice(0, todayIdx);
+  const fwdSlice  = n => daily[n].slice(todayIdx, todayIdx + 7);
+
+  const maxT7   = Math.max(...pastSlice('temperature_2m_max'));
+  const minT7   = Math.min(...pastSlice('temperature_2m_min'));
+  const precip7 = pastSlice('precipitation_sum').reduce((a, b) => a + (b || 0), 0);
+  const et07    = pastSlice('et0_fao_evapotranspiration');
+  const avgEt0  = et07.length ? et07.reduce((a, b) => a + (b || 0), 0) / et07.length : 0;
+
+  const kpis = [
+    { label: 'Current temperature', value: curr.temperature_2m.toFixed(1) + '°C',
+      sub: 'Humidity ' + curr.relative_humidity_2m + '% · Wind ' + curr.windspeed_10m.toFixed(0) + ' km/h',
+      cls: curr.temperature_2m >= 38 ? 'bad' : '' },
+    { label: '7-day max / min temp', value: maxT7.toFixed(1) + ' / ' + minT7.toFixed(1) + '°C',
+      sub: 'Historical window', cls: maxT7 >= 38 ? 'warn' : '' },
+    { label: '7-day precipitation', value: precip7.toFixed(1) + ' mm',
+      sub: 'Seasonal normal ≈ 2 mm (dry season)', cls: precip7 > 20 ? 'warn' : '' },
+    { label: 'Avg daily ET₀ (7d)', value: avgEt0.toFixed(1) + ' mm/day',
+      sub: 'FAO-56 reference evapotranspiration', cls: '' },
+  ];
+
+  const fwdMax    = fwdSlice('temperature_2m_max');
+  const fwdMin    = fwdSlice('temperature_2m_min');
+  const fwdPrecip = fwdSlice('precipitation_sum');
+  const heatAlert = fwdMax.some(t => t >= 38);
+  const extremeHeat = fwdMax.some(t => t >= 42);
+  const frostRisk = fwdMin.some(t => t <= 2);
+  const rainRisk  = fwdPrecip.some(t => t >= 10);
+
+  const alerts = [
+    { label: 'Heat stress (≥38°C forecast)',
+      status: extremeHeat ? 'red' : heatAlert ? 'yellow' : 'green',
+      detail: extremeHeat ? 'Extreme heat (≥42°C) in 7-day forecast — severe cluster sunburn risk'
+            : heatAlert   ? 'Heat stress days forecast — monitor for cluster and shoot damage'
+                          : 'No heat stress days in 7-day forecast' },
+    { label: 'Frost / cold snap (≤2°C forecast)',
+      status: frostRisk ? 'red' : 'green',
+      detail: frostRisk ? 'Sub-2°C temperatures forecast — bud and shoot damage risk'
+                        : 'No frost risk in 7-day forecast' },
+    { label: 'Harvest rain risk (≥10mm forecast)',
+      status: rainRisk ? 'yellow' : 'green',
+      detail: rainRisk ? 'Significant rainfall forecast — berry cracking and botrytis risk for ripe clusters'
+                       : 'No significant rain forecast' },
+  ];
+
+  const fmtLabel = t => {
+    const d = new Date(t);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  content.innerHTML =
+    '<div class="grid-kpi">' +
+    kpis.map(k => '<div class="kpi ' + k.cls + '"><div class="label">' + k.label + '</div>' +
+      '<div class="value">' + k.value + '</div><div class="sub">' + k.sub + '</div></div>').join('') +
+    '</div>' +
+    '<div class="chart-wrap" style="height:240px;margin-bottom:14px"><canvas id="weatherTempChart"></canvas></div>' +
+    '<div class="chart-wrap" style="height:180px;margin-bottom:14px"><canvas id="weatherPrecipChart"></canvas></div>' +
+    '<div class="trigger-card" style="margin-bottom:0"><h2>7-day crop health outlook</h2>' +
+    alerts.map(a => '<div class="trigger"><div class="trigger-label">' + a.label +
+      '<div style="font-size:11px;color:var(--c-muted)">' + a.detail + '</div></div>' +
+      '<div class="trigger-status ' + a.status + '">' +
+      (a.status === 'red' ? 'ALERT' : a.status === 'yellow' ? 'WATCH' : 'CLEAR') +
+      '</div></div>').join('') + '</div>';
+
+  const labels   = daily.time.map(fmtLabel);
+  const splitIdx = todayIdx;
+
+  const todayLinePlugin = {
+    id: 'todayLine',
+    afterDraw(chart) {
+      if (!chart.getDatasetMeta(0).data[splitIdx]) return;
+      const ctx = chart.ctx;
+      const x   = chart.getDatasetMeta(0).data[splitIdx].x;
+      const { top, bottom } = chart.chartArea;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('Today', x, top - 2);
+      ctx.restore();
+    },
+  };
+
+  new Chart(document.getElementById('weatherTempChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Max °C', data: daily.temperature_2m_max,
+          borderColor: '#D85A30', backgroundColor: 'rgba(216,90,48,0.10)',
+          fill: '+1', pointRadius: 2, borderWidth: 2, tension: 0.3 },
+        { label: 'Min °C', data: daily.temperature_2m_min,
+          borderColor: '#185FA5', backgroundColor: 'rgba(24,95,165,0.08)',
+          fill: false, pointRadius: 2, borderWidth: 2, tension: 0.3 },
+      ],
+    },
+    plugins: [todayLinePlugin],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { maxRotation: 45, minRotation: 30, autoSkip: true, maxTicksLimit: 14, font: { size: 10 } } },
+        y: { title: { display: true, text: '°C' }, ticks: { callback: v => v + '°' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: { mode: 'index', intersect: false,
+          callbacks: { label: c => c.dataset.label + ': ' + (c.parsed.y != null ? c.parsed.y.toFixed(1) + '°C' : '—') } },
+      },
+    },
+  });
+
+  const precipColors = daily.precipitation_sum.map((_, i) =>
+    i < splitIdx ? 'rgba(31,56,100,0.65)' : 'rgba(31,56,100,0.28)'
+  );
+  new Chart(document.getElementById('weatherPrecipChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Precipitation (mm)', data: daily.precipitation_sum,
+        backgroundColor: precipColors, borderColor: precipColors, borderWidth: 0, borderRadius: 2 }],
+    },
+    plugins: [todayLinePlugin],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { maxRotation: 45, minRotation: 30, autoSkip: true, maxTicksLimit: 14, font: { size: 10 } } },
+        y: { title: { display: true, text: 'mm' }, min: 0 },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: { callbacks: { label: c => (c.parsed.y != null ? c.parsed.y.toFixed(1) : '0') + ' mm' } },
+      },
+    },
+  });
 }
 
 // ── Password gate ─────────────────────────────────────────────
@@ -1166,6 +1229,7 @@ async function loadData() {
     vidStatus.classList.add('loaded');
 
     tryRender();
+    loadWeatherData();
 
   } catch (err) {
     showError('Could not load data — check the docs/data/ folder', err);
