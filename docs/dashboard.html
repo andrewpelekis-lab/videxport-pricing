@@ -152,6 +152,38 @@
   .trigger-status.red { background: #fae6e6; color: var(--c-bad); }
   .trigger-status.gray { background: #efefec; color: var(--c-muted); }
 
+  .weather-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .wx-live {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .wx-live h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--c-accent); }
+  .wx-live .desc { font-size: 12px; color: var(--c-muted); margin-bottom: 14px; }
+  .wx-stations { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wx-station { background: var(--c-bg); border-radius: 6px; padding: 12px 14px; }
+  .wx-loc { font-size: 10px; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .wx-temp { font-size: 28px; font-weight: 500; color: var(--c-text); line-height: 1; }
+  .wx-cond { font-size: 12px; color: var(--c-muted); margin-top: 5px; }
+  .wx-wind { font-size: 11px; color: var(--c-muted); margin-top: 3px; }
+  .wx-spinner { font-size: 12px; color: var(--c-muted); }
+  .wx-err { font-size: 11px; color: var(--c-bad); }
+  .wx-ts { font-size: 10px; color: var(--c-muted); margin-top: 12px; }
+  .overlay-btn {
+    font-size: 11px; padding: 3px 9px;
+    border: 1px solid var(--c-border-strong);
+    border-radius: 4px; background: #fff;
+    cursor: pointer; margin-left: 10px;
+    vertical-align: middle; font-weight: 400; color: var(--c-text);
+  }
+  .overlay-btn.active { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
+
   .empty-state {
     background: var(--c-card);
     border: 1px solid var(--c-border);
@@ -208,12 +240,36 @@
     <div><label>Date to</label><input type="date" id="date-to"></div>
   </div>
 
+  <div class="weather-panel" id="weather-panel">
+    <div class="wx-live">
+      <h2>Live Weather Conditions</h2>
+      <div class="desc">Market hub &amp; growing region — refreshed on page load</div>
+      <div class="wx-stations">
+        <div class="wx-station">
+          <div class="wx-loc">Nogales, AZ &mdash; Market Hub</div>
+          <div id="wx-nogales"><div class="wx-spinner">Fetching&hellip;</div></div>
+        </div>
+        <div class="wx-station">
+          <div class="wx-loc">Hermosillo, Sonora &mdash; Growing Region</div>
+          <div id="wx-hermosillo"><div class="wx-spinner">Fetching&hellip;</div></div>
+        </div>
+      </div>
+      <div class="wx-ts" id="wx-updated"></div>
+    </div>
+    <div class="chart-card" style="margin-bottom: 0;">
+      <h2>Growing Degree Days &mdash; Hermosillo, Sonora</h2>
+      <div class="desc">Cumulative heat units above 50&deg;F base (grape development proxy). Each line = one calendar year.</div>
+      <div class="chart-wrap"><canvas id="gddChart" role="img" aria-label="Growing degree days by year"></canvas></div>
+      <div id="gdd-loading" style="font-size:12px; color:var(--c-muted); padding: 8px 0; display:none;">Loading historical weather data&hellip;</div>
+    </div>
+  </div>
+
   <div id="main-content" style="display: none;">
 
     <div class="grid-kpi" id="kpi-grid"></div>
 
     <div class="chart-card">
-      <h2>Price history — USDA Nogales vs Videxport realized</h2>
+      <h2>Price history — USDA Nogales vs Videxport realized <button id="overlay-btn" class="overlay-btn" onclick="toggleWeatherOverlay()">+ Temp Overlay</button></h2>
       <div class="desc">USDA daily midpoint by variety (solid) vs. Videxport realized $/box (markers). Videxport rows without dates excluded from chart but visible in detail table.</div>
       <div class="chart-wrap"><canvas id="priceChart" role="img" aria-label="Time-series of USDA Nogales benchmark prices and Videxport realized prices"></canvas></div>
     </div>
@@ -290,6 +346,156 @@ const VARIETY_COLORS = {
   'PRIME':               '#888780',
 };
 const DEFAULT_COLORS = ['#534AB7', '#D85A30', '#1D9E75', '#185FA5', '#993556', '#BA7517', '#A32D2D', '#888780'];
+
+// ── Weather ──────────────────────────────────────────────────────────────
+const NOGALES_LOC    = { lat: 31.34, lon: -110.94 };
+const HERMOSILLO_LOC = { lat: 29.07, lon: -110.95 };
+const GDD_BASE = 50; // °F base temperature for grape GDD
+
+let wxHistorical = null;  // parsed daily records [{date,tmax,tmin,precip,gdd}]
+let showWxOverlay = false;
+let gddChartInst = null;
+
+const WMO_LABEL = {
+  0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+  45:'Fog', 48:'Icy fog',
+  51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle',
+  61:'Light rain', 63:'Rain', 65:'Heavy rain',
+  71:'Light snow', 73:'Snow', 75:'Heavy snow',
+  80:'Showers', 81:'Rain showers', 82:'Violent showers',
+  95:'Thunderstorm', 99:'Thunderstorm w/ hail',
+};
+
+async function initWeather() {
+  const currentUrl = (lat, lon) =>
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m` +
+    `&temperature_unit=fahrenheit&windspeed_unit=mph`;
+
+  const [nRes, hRes] = await Promise.allSettled([
+    fetch(currentUrl(NOGALES_LOC.lat, NOGALES_LOC.lon)),
+    fetch(currentUrl(HERMOSILLO_LOC.lat, HERMOSILLO_LOC.lon)),
+  ]);
+
+  const toJson = async r => (r.status === 'fulfilled' && r.value.ok) ? r.value.json() : null;
+  renderLiveStation(await toJson(nRes), document.getElementById('wx-nogales'));
+  renderLiveStation(await toJson(hRes), document.getElementById('wx-hermosillo'));
+  document.getElementById('wx-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  // Historical daily data for GDD + price chart overlay
+  document.getElementById('gdd-loading').style.display = 'block';
+  try {
+    const endDate = new Date(); endDate.setDate(endDate.getDate() - 1);
+    const startDate = new Date(endDate); startDate.setFullYear(startDate.getFullYear() - 3);
+    const fmt = d => d.toISOString().slice(0, 10);
+    const url = `https://archive-api.open-meteo.com/v1/archive` +
+      `?latitude=${HERMOSILLO_LOC.lat}&longitude=${HERMOSILLO_LOC.lon}` +
+      `&start_date=${fmt(startDate)}&end_date=${fmt(endDate)}` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    wxHistorical = json.daily.time.map((t, i) => {
+      const tmax = json.daily.temperature_2m_max[i];
+      const tmin = json.daily.temperature_2m_min[i];
+      return {
+        date: new Date(t + 'T00:00:00'),
+        tmax, tmin,
+        precip: json.daily.precipitation_sum[i],
+        gdd: (tmax != null && tmin != null) ? Math.max(0, (tmax + tmin) / 2 - GDD_BASE) : 0,
+      };
+    });
+    document.getElementById('gdd-loading').style.display = 'none';
+    renderGDDChart();
+  } catch (e) {
+    document.getElementById('gdd-loading').textContent = 'Historical weather data unavailable.';
+  }
+}
+
+function renderLiveStation(data, el) {
+  if (!data || !data.current) {
+    el.innerHTML = '<div class="wx-err">Unavailable</div>';
+    return;
+  }
+  const c = data.current;
+  el.innerHTML =
+    `<div class="wx-temp">${Math.round(c.temperature_2m)}&deg;F</div>` +
+    `<div class="wx-cond">${WMO_LABEL[c.weathercode] || 'Unknown'}</div>` +
+    `<div class="wx-wind">Wind ${Math.round(c.windspeed_10m)} mph &middot; RH ${c.relative_humidity_2m}%</div>`;
+}
+
+function renderGDDChart() {
+  if (!wxHistorical) return;
+  const canvas = document.getElementById('gddChart');
+  if (!canvas) return;
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  function isoWeek(d) {
+    const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+    const yr = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil(((tmp - yr) / 86400000 + 1) / 7);
+  }
+
+  const byYear = {};
+  wxHistorical.forEach(r => {
+    const yr = r.date.getFullYear();
+    const wk = isoWeek(r.date);
+    if (!byYear[yr]) byYear[yr] = {};
+    byYear[yr][wk] = (byYear[yr][wk] || 0) + r.gdd;
+  });
+
+  const years = Object.keys(byYear).sort();
+  const weekNums = Array.from({ length: 52 }, (_, i) => i + 1);
+  const yearColors = ['#534AB7', '#D85A30', '#1D9E75', '#BA7517'];
+
+  const datasets = years.map((yr, i) => {
+    let cumGDD = 0;
+    const data = weekNums.map(wk => {
+      if (byYear[yr][wk] != null) { cumGDD += byYear[yr][wk]; return cumGDD; }
+      return null;
+    });
+    return {
+      label: yr, data,
+      borderColor: yearColors[i % yearColors.length],
+      backgroundColor: 'transparent',
+      pointRadius: 1.5, borderWidth: 2, tension: 0.3, spanGaps: false,
+    };
+  });
+
+  gddChartInst = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels: weekNums.map(w => 'W' + String(w).padStart(2, '0')), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { autoSkip: true, maxTicksLimit: 13 } },
+        y: { title: { display: true, text: 'Cumul. GDD (base 50°F)' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+        tooltip: { callbacks: {
+          label: c => c.dataset.label + ': ' + (c.parsed.y == null ? '—' : Math.round(c.parsed.y) + ' GDD')
+        }},
+      },
+      interaction: { mode: 'nearest', intersect: false },
+    }
+  });
+}
+
+function toggleWeatherOverlay() {
+  showWxOverlay = !showWxOverlay;
+  const btn = document.getElementById('overlay-btn');
+  if (btn) {
+    btn.classList.toggle('active', showWxOverlay);
+    btn.textContent = showWxOverlay ? '− Temp Overlay' : '+ Temp Overlay';
+  }
+  applyFilters();
+}
+// ── End Weather ───────────────────────────────────────────────────────────
 
 const debugEl = document.getElementById('debug');
 function showError(msg, err) {
@@ -663,6 +869,29 @@ function renderPriceChart(vid, usda) {
     return;
   }
 
+  if (showWxOverlay && wxHistorical) {
+    const tempWeekly = {};
+    wxHistorical.forEach(r => {
+      if (!r.date || r.tmax == null || r.tmin == null) return;
+      const wk = weekKey(r.date);
+      if (!tempWeekly[wk]) tempWeekly[wk] = { sum: 0, n: 0 };
+      tempWeekly[wk].sum += (r.tmax + r.tmin) / 2;
+      tempWeekly[wk].n++;
+    });
+    datasets.push({
+      label: 'Hermosillo Avg Temp (°F)',
+      data: weekKeys.map(k => tempWeekly[k] ? tempWeekly[k].sum / tempWeekly[k].n : null),
+      borderColor: '#E88030',
+      backgroundColor: 'rgba(232,128,48,0.07)',
+      borderDash: [4, 3],
+      pointRadius: 0,
+      borderWidth: 1.5,
+      tension: 0.4,
+      spanGaps: true,
+      yAxisID: 'y2',
+    });
+  }
+
   priceChart = new Chart(document.getElementById('priceChart').getContext('2d'), {
     type: 'line',
     data: { labels: labels, datasets: datasets },
@@ -670,12 +899,20 @@ function renderPriceChart(vid, usda) {
       responsive: true, maintainAspectRatio: false,
       scales: {
         x: { ticks: { maxRotation: 60, minRotation: 30, autoSkip: true, maxTicksLimit: 14 } },
-        y: { title: { display: true, text: '$ / box' } }
+        y: { title: { display: true, text: '$ / box' } },
+        y2: {
+          display: !!(showWxOverlay && wxHistorical),
+          position: 'right',
+          title: { display: true, text: 'Temp °F' },
+          grid: { drawOnChartArea: false },
+        },
       },
       plugins: {
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
         tooltip: { callbacks: {
-          label: (c) => c.dataset.label + ': $' + (c.parsed.y == null ? '—' : c.parsed.y.toFixed(2))
+          label: (c) => c.dataset.yAxisID === 'y2'
+            ? c.dataset.label + ': ' + (c.parsed.y == null ? '—' : Math.round(c.parsed.y) + '°F')
+            : c.dataset.label + ': $' + (c.parsed.y == null ? '—' : c.parsed.y.toFixed(2))
         } }
       },
       interaction: { mode: 'nearest', intersect: false },
@@ -864,6 +1101,7 @@ function renderTriggers(vid, usda) {
 function renderTable(vid, usda) {
   const sizeFilter = document.getElementById('size-filter').value;
   const tbody = document.querySelector('#liq-table tbody');
+
   const dated = vid.filter(r => r.date);
   const undated = vid.filter(r => !r.date);
   const sortedDated = dated.sort((a,b) => b.date - a.date).slice(0, 100);
@@ -889,6 +1127,8 @@ function renderTable(vid, usda) {
       '</tr>';
   }).join('');
 }
+// Kick off weather fetch immediately on page load
+initWeather().catch(e => console.warn('Weather init failed:', e));
 </script>
 
 </body>
