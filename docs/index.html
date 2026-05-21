@@ -307,11 +307,12 @@
   <!-- Data status banner (replaces upload-zone) -->
   <div class="data-banner">
     <div class="banner-info">
-      <span id="last-refreshed" class="last-refreshed">Loading data…</span>
+      <span id="latest-report" class="last-refreshed">Loading data…</span>
+      <span id="data-updated" class="status" title="When the data file itself was last pulled from USDA"></span>
       <span id="usda-status" class="status"></span>
       <span id="vid-status" class="status"></span>
     </div>
-    <button id="refresh-btn" class="refresh-btn">↻ Refresh</button>
+    <button id="refresh-btn" class="refresh-btn" title="Re-read the data files from this site. Source data is auto-pulled from USDA daily at 14:00 UTC.">↻ Refresh</button>
   </div>
 
   <div id="debug" class="debug"></div>
@@ -1570,13 +1571,27 @@ async function checkPassword() {
 async function loadData() {
   const ts = Date.now();
   clearDebug();
-  document.getElementById('last-refreshed').textContent = 'Loading…';
+  document.getElementById('latest-report').textContent = 'Loading…';
+  document.getElementById('data-updated').textContent = '';
   const usdaStatus = document.getElementById('usda-status');
   const vidStatus = document.getElementById('vid-status');
   usdaStatus.textContent = '';
   vidStatus.textContent = '';
   usdaStatus.className = 'status';
   vidStatus.className = 'status';
+
+  // Fetch manifest in parallel (optional — degrades gracefully if absent)
+  fetch('data/manifest.json?t=' + ts, { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then(m => {
+      if (!m || !m.refreshed_utc) return;
+      const d = new Date(m.refreshed_utc);
+      if (!isNaN(d)) {
+        document.getElementById('data-updated').textContent =
+          'Data file updated: ' + fmtD(d) + ' (auto-refresh ' + (m.schedule || 'daily 14:00 UTC') + ')';
+      }
+    })
+    .catch(() => {});
 
   try {
     const [usdaRes, vidRes] = await Promise.all([
@@ -1598,8 +1613,8 @@ async function loadData() {
     usdaStatus.textContent = USDA.length + ' USDA rows' +
       (usdaMin && usdaMax ? ' · ' + fmtD(usdaMin) + ' – ' + fmtD(usdaMax) : '');
     usdaStatus.classList.add('loaded');
-    document.getElementById('last-refreshed').textContent =
-      usdaMax ? 'Last refreshed: ' + fmtD(usdaMax) : 'USDA data loaded';
+    document.getElementById('latest-report').textContent =
+      usdaMax ? 'Latest USDA report: ' + fmtD(usdaMax) : 'USDA data loaded';
 
     // Parse Videxport liquidations
     const vidResult = Papa.parse(vidText, { header: true, skipEmptyLines: true, comments: '#' });
@@ -1618,7 +1633,7 @@ async function loadData() {
 
   } catch (err) {
     showError('Could not load data — check the docs/data/ folder', err);
-    document.getElementById('last-refreshed').textContent = 'Error loading data';
+    document.getElementById('latest-report').textContent = 'Error loading data';
     document.getElementById('empty-state').textContent =
       'Could not load data. If running locally, open via a local server (not file://). ' +
       'On GitHub Pages, check that docs/data/usda_master.csv exists and the workflow has run.';

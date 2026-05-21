@@ -20,10 +20,11 @@ Usage:
 """
 
 import csv
+import json
 import os
 import sys
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 try:
     import requests
@@ -56,6 +57,10 @@ FULL_START_DATE = "01/01/2023"     # how far back to go on a FULL refresh
 OUTPUT_CSV = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "docs", "data", "usda_master.csv"
+)
+MANIFEST_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "docs", "data", "manifest.json"
 )
 
 # ============================================================
@@ -215,17 +220,37 @@ def main():
         time.sleep(1)
 
     all_rows = existing + new_rows
-    if not all_rows:
-        print("\nNothing to write.")
-        return
+    if all_rows:
+        fieldnames = list(all_rows[0].keys())
+        os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
+        with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(all_rows)
+        print(f"\nWrote {len(all_rows)} total rows ({len(new_rows)} new) to {OUTPUT_CSV}")
+    else:
+        print("\nNo rows to write (CSV unchanged).")
 
-    fieldnames = list(all_rows[0].keys())
-    os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(all_rows)
-    print(f"\nWrote {len(all_rows)} total rows ({len(new_rows)} new) to {OUTPUT_CSV}")
+    # Write manifest with refresh metadata so the dashboard can show when
+    # the data was last actually pulled (distinct from the latest report_date).
+    latest_report = None
+    for r in all_rows:
+        try:
+            d = datetime.strptime(r["report_date"], "%m/%d/%Y").date()
+            if latest_report is None or d > latest_report:
+                latest_report = d
+        except (ValueError, KeyError):
+            continue
+    manifest = {
+        "refreshed_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "latest_report_date": latest_report.isoformat() if latest_report else None,
+        "total_rows": len(all_rows),
+        "new_rows_this_run": len(new_rows),
+        "schedule": "daily 14:00 UTC",
+    }
+    with open(MANIFEST_JSON, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"Wrote manifest to {MANIFEST_JSON}: refreshed_utc={manifest['refreshed_utc']}")
 
 
 if __name__ == "__main__":
