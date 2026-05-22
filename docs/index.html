@@ -279,6 +279,51 @@
   .cycle-today-label { position: absolute; top: -26px; left: 4px; font-size: 10px; font-weight: 500; color: #A32D2D; background: #fff; border: 1px solid #A32D2D; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
   .paca-note { font-size: 11px; color: var(--c-muted); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--c-border); }
   .paca-note strong { color: var(--c-accent); }
+
+  /* ── Crop Health Monitor ────────────────────────────────────── */
+  .health-monitor-card { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+  .health-monitor-card h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--c-accent); }
+  .health-monitor-card .desc { font-size: 12px; color: var(--c-muted); margin-bottom: 14px; }
+
+  .rev-focus { margin-bottom: 14px; }
+  .rev-focus-title { font-size: 11px; color: var(--c-muted); margin-bottom: 6px; }
+  .rev-focus-title strong { color: var(--c-text); font-weight: 600; }
+  .rev-bar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; gap: 1px; background: #f0f0ec; }
+  .rev-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 500; padding: 0 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .crop-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--c-border); margin-bottom: 16px; }
+  .crop-tab { background: none; border: none; padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--c-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; transition: color 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .crop-tab:hover { color: var(--c-text); }
+  .crop-tab.active { color: var(--c-accent); border-bottom-color: var(--c-accent); font-weight: 500; }
+  .crop-tab.focus::before { content: '★ '; color: var(--c-warn); }
+  .crop-tab.dim { opacity: 0.45; }
+  .tab-share { font-size: 11px; color: var(--c-muted); }
+  .crop-tab.active .tab-share { color: var(--c-accent); }
+
+  .crop-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+  .crop-name { font-size: 16px; font-weight: 500; color: var(--c-text); }
+  .crop-phase { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+  .crop-phase strong { color: var(--c-accent); }
+  .crop-overall { font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 12px; white-space: nowrap; }
+  .crop-overall.green  { background: #e6f4ee; color: var(--c-good); }
+  .crop-overall.yellow { background: #faf0d9; color: var(--c-warn); }
+  .crop-overall.red    { background: #fae6e6; color: var(--c-bad);  }
+  .crop-overall.gray   { background: #efefec; color: var(--c-muted); }
+
+  .risk-list { display: flex; flex-direction: column; }
+  .risk-item { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--c-border); }
+  .risk-item:first-child { border-top: none; }
+  .risk-label { font-size: 13px; color: var(--c-text); }
+  .risk-advisory { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+  .risk-value { font-size: 12px; color: var(--c-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .risk-status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; }
+  .risk-status.green  { background: #e6f4ee; color: var(--c-good); }
+  .risk-status.yellow { background: #faf0d9; color: var(--c-warn); }
+  .risk-status.red    { background: #fae6e6; color: var(--c-bad);  }
+  .risk-status.gray   { background: #efefec; color: var(--c-muted); }
+
+  .crop-outlook { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--c-border); font-size: 12px; color: var(--c-muted); line-height: 1.5; }
+  .crop-outlook strong { color: var(--c-accent); }
 </style>
 </head>
 <body>
@@ -381,6 +426,14 @@
 
       <div class="paca-note">
         <strong>PACA Trust</strong> &mdash; Under the Perishable Agricultural Commodities Act, all proceeds and accounts receivable from unpaid produce sales are held in a statutory trust for the benefit of the seller (and its lender by assignment), with priority ahead of all other secured creditors. This gives the facility super-priority collateral that supersedes Article 9 UCC liens.
+      </div>
+    </div>
+
+    <div class="health-monitor-card" id="crop-health-monitor">
+      <h2>Crop Health Monitor</h2>
+      <div class="desc">Per-crop health assessment driven by each crop's current phase and Hermosillo's 7-day weather. Tabs let you switch crops; <strong>&starf;</strong> marks the current revenue-focus crop. Off-season crops are dimmed.</div>
+      <div class="health-content" id="health-content">
+        <div style="font-size:12px;color:var(--c-muted);padding:8px 0">Loading weather model&hellip;</div>
       </div>
     </div>
 
@@ -560,6 +613,7 @@ function tryRender() {
     applyFilters();
     renderCropCycle();
     renderDealStatus();
+    renderCropHealthMonitor();
   } catch (e) { showError('tryRender', e); }
   document.getElementById('data-summary').textContent =
     USDA.length + ' USDA obs · ' + VID.length + ' liquidations';
@@ -1136,6 +1190,7 @@ async function loadWeatherData() {
     weatherCache = await res.json();
     renderWeatherPanel(weatherCache);
     try { renderDealStatus(); } catch (e) { /* deal status may not be mounted yet */ }
+    try { renderCropHealthMonitor(); } catch (e) { /* health monitor may not be mounted */ }
   } catch (err) {
     if (content) content.innerHTML =
       '<div style="color:var(--c-muted);font-size:12px;padding:8px 0">Weather data unavailable: ' + err.message + '</div>';
@@ -1474,41 +1529,45 @@ function renderDealStatus() {
     cards.push({ label: 'Delivery Flow', metric: '—', detail: 'Awaiting Videxport liquidation data', status: 'gray' });
   }
 
-  // 3. Crop Health — derived from existing weather data (°C, Hermosillo)
-  if (weatherCache && weatherCache.daily) {
-    const daily = weatherCache.daily;
-    const today0 = new Date(); today0.setHours(0,0,0,0);
-    const todayIdx = daily.time.findIndex(t => new Date(t) >= today0);
-    const fwdMax = daily.temperature_2m_max.slice(todayIdx, todayIdx + 7);
-    const fwdMin = daily.temperature_2m_min.slice(todayIdx, todayIdx + 7);
-    const fwdPpt = daily.precipitation_sum.slice(todayIdx, todayIdx + 7);
-    const pastMax = daily.temperature_2m_max.slice(0, todayIdx);
-    const pastMin = daily.temperature_2m_min.slice(0, todayIdx);
+  // 3. Crop Health — focus crop's phase-specific risks vs weather forecast
+  if (weatherCache && weatherCache.daily && typeof CROP_PROFILES !== 'undefined') {
+    const month = now.getMonth();
+    const revInfo = getRevenueShare(month);
+    let focusCrop = Object.keys(CROP_PROFILES)[0], maxShare = -1;
+    Object.keys(CROP_PROFILES).forEach(c => {
+      if ((revInfo.shares[c] || 0) > maxShare) { maxShare = revInfo.shares[c] || 0; focusCrop = c; }
+    });
+    const profile = CROP_PROFILES[focusCrop];
+    const cycleEntry = CROP_CYCLE[profile.cycle_key];
+    const phase = cycleEntry ? cycleEntry[month][0] : 'offseason';
+    const phaseLabel = cycleEntry ? cycleEntry[month][1] : 'Off-season';
+    const phaseRisks = (profile.phase_risks[phase] || []).filter(r => r.metric);
+    const metrics = computeCropMetrics(weatherCache.daily, 7);
+    const evaluated = phaseRisks.map(r => Object.assign({}, r, evalRisk(r, metrics)));
 
-    const extremeHeat = fwdMax.some(t => t >= 42);
-    const heatAlert   = fwdMax.some(t => t >= 38) || pastMax.some(t => t >= 38);
-    const frostRisk   = fwdMin.some(t => t <= 2)  || pastMin.some(t => t <= 2);
-    const rainRisk    = fwdPpt.some(p => p >= 10);
-
+    const statuses = evaluated.map(e => e.status);
     let status, metric, detail;
-    if (extremeHeat || (frostRisk && heatAlert)) {
+    if (statuses.includes('red')) {
       status = 'red';
-      metric = 'Stressed';
-      detail = extremeHeat ? 'Extreme heat (≥42°C) in 7-day forecast — cluster sunburn risk' : 'Multiple stress signals active';
-    } else if (heatAlert || frostRisk || rainRisk) {
+      const flag = evaluated.find(e => e.status === 'red');
+      metric = focusCrop + ': Alert';
+      detail = phaseLabel + ' — ' + (flag ? flag.label + ' (' + flag.value + ')' : 'high stress detected');
+    } else if (statuses.includes('yellow')) {
       status = 'yellow';
-      metric = 'Watch';
-      const flags = [];
-      if (heatAlert) flags.push('heat ≥38°C');
-      if (frostRisk) flags.push('frost ≤2°C');
-      if (rainRisk)  flags.push('rain ≥10mm');
-      detail = 'Stress signals: ' + flags.join(' · ');
+      const flag = evaluated.find(e => e.status === 'yellow');
+      metric = focusCrop + ': Watch';
+      detail = phaseLabel + ' — ' + (flag ? flag.label + ' (' + flag.value + ')' : 'elevated stress');
+    } else if (statuses.length === 0) {
+      // No specific risks defined for this phase (e.g. dormancy)
+      status = 'green';
+      metric = focusCrop + ': Off-cycle';
+      detail = phaseLabel + ' — limited weather sensitivity in this phase';
     } else {
       status = 'green';
-      metric = 'Normal';
-      detail = 'No heat, frost, or harvest-rain stress in 7-day window';
+      metric = focusCrop + ': Healthy';
+      detail = phaseLabel + ' — all phase-specific stress factors clear (7-day)';
     }
-    cards.push({ label: 'Crop Health', metric: metric, detail: detail, status: status });
+    cards.push({ label: 'Crop Health (focus)', metric: metric, detail: detail, status: status });
   } else {
     cards.push({ label: 'Crop Health', metric: '—', detail: 'Loading Hermosillo weather model…', status: 'gray' });
   }
@@ -1542,6 +1601,296 @@ function renderDealStatus() {
     '</div>'
   ).join('');
 }
+
+// ── Crop Health Monitor (per-crop, phase-aware) ───────────────
+// Each crop's stress thresholds change with phase. Risks listed here apply
+// only when the crop is in that phase (per CROP_CYCLE). Metrics are computed
+// across the next 7 days of forecast.
+const CROP_PROFILES = {
+  'Grape': {
+    cycle_key: 'Grape (table)',
+    fallback_share: [0, 0, 0, 0.05, 0.45, 0.40, 0.10, 0, 0, 0, 0, 0],
+    color: '#534AB7',
+    phase_risks: {
+      'harvest': [
+        { label: 'Berry sunburn',         metric: 'tmax_max',   op: '>=', red: 40, yellow: 38, advisory: 'Direct sun on exposed clusters scorches berries' },
+        { label: 'Harvest heat stress',   metric: 'tmax_avg',   op: '>=', red: 38, yellow: 35, advisory: 'Reduces shelf life — pack at dawn temps' },
+        { label: 'Berry split / botrytis',metric: 'precip_max', op: '>=', red: 10, yellow: 5,  advisory: 'Rain on ripe clusters causes split and fungal disease' },
+      ],
+      'growing': [
+        { label: 'Fruit-set heat',        metric: 'tmax_max',   op: '>=', red: 37, yellow: 35, advisory: 'Heat during flowering reduces fruit set' },
+        { label: 'Bud / shoot frost',     metric: 'tmin_min',   op: '<=', red: 2,  yellow: 5,  advisory: 'Tender new growth damaged by frost' },
+      ],
+      'pruning':   [{ label: 'Vines dormant',    metric: null, advisory: 'Limited weather sensitivity during dormancy and pruning' }],
+      'offseason': [{ label: 'Post-harvest',     metric: null, advisory: 'Vines have completed their annual cycle' }],
+    },
+  },
+  'Watermelon': {
+    cycle_key: 'Watermelon',
+    fallback_share: [0.05, 0.05, 0.05, 0.20, 0.40, 0.20, 0.05, 0, 0, 0, 0, 0],
+    color: '#1D9E75',
+    phase_risks: {
+      'harvest': [
+        { label: 'Fruit split',           metric: 'precip_max', op: '>=', red: 10, yellow: 5,  advisory: 'Mature melons crack with heavy rain' },
+        { label: 'Harvest heat',          metric: 'tmax_max',   op: '>=', red: 38, yellow: 35, advisory: 'Reduces shelf life — harvest early morning' },
+      ],
+      'growing': [
+        { label: 'Vine cold damage',      metric: 'tmin_min',   op: '<=', red: 5,  yellow: 10, advisory: 'Growth stalls below 10°C; killed by frost' },
+        { label: 'Foliage scorch',        metric: 'tmax_max',   op: '>=', red: 42, yellow: 38, advisory: 'Leaf burn above 38°C reduces yield' },
+      ],
+      'planting': [
+        { label: 'Seedling frost',        metric: 'tmin_min',   op: '<=', red: 2,  yellow: 5,  advisory: 'Frost kills emerging seedlings' },
+        { label: 'Germination heat',      metric: 'tmax_max',   op: '>=', red: 40, yellow: 35, advisory: 'Excess heat reduces germination rates' },
+      ],
+      'offseason': [{ label: 'Off-season', metric: null, advisory: 'No active production' }],
+    },
+  },
+  'Honeydew': {
+    cycle_key: 'Honeydew',
+    fallback_share: [0, 0.15, 0.35, 0.30, 0.15, 0.05, 0, 0, 0, 0, 0, 0],
+    color: '#185FA5',
+    phase_risks: {
+      'harvest': [
+        { label: 'Fruit cracking',        metric: 'precip_max', op: '>=', red: 10, yellow: 5,  advisory: 'Ripe melons split with rain' },
+        { label: 'Harvest heat',          metric: 'tmax_max',   op: '>=', red: 36, yellow: 34, advisory: 'Honeydew is softer than watermelon — needs cooler pick' },
+      ],
+      'growing': [
+        { label: 'Cold damage',           metric: 'tmin_min',   op: '<=', red: 5,  yellow: 10, advisory: 'Sensitive to chill — growth stalls below 10°C' },
+      ],
+      'planting': [
+        { label: 'Seedling frost',        metric: 'tmin_min',   op: '<=', red: 2,  yellow: 5,  advisory: 'Frost kills emerging seedlings' },
+      ],
+      'offseason': [{ label: 'Off-season', metric: null, advisory: 'No active production' }],
+    },
+  },
+  'Bell Pepper': {
+    cycle_key: 'Bell Pepper',
+    fallback_share: [0.20, 0.25, 0.25, 0.15, 0.10, 0, 0, 0, 0, 0, 0, 0.05],
+    color: '#BA7517',
+    phase_risks: {
+      'harvest': [
+        { label: 'Chilling injury',       metric: 'tmin_min',   op: '<=', red: 5,  yellow: 10, advisory: 'Pepper fruit damaged below 10°C' },
+        { label: 'Anthracnose (rain)',    metric: 'precip_max', op: '>=', red: 10, yellow: 5,  advisory: 'Fungal disease in wet harvest conditions' },
+        { label: 'Sunscald',              metric: 'tmax_max',   op: '>=', red: 38, yellow: 35, advisory: 'Direct sun on exposed fruit' },
+      ],
+      'growing': [
+        { label: 'Flower drop (heat)',    metric: 'tmax_max',   op: '>=', red: 35, yellow: 32, advisory: 'Flower abortion above 32°C' },
+        { label: 'Cold growth stall',     metric: 'tmin_min',   op: '<=', red: 5,  yellow: 10, advisory: 'Growth slows below 15°C' },
+      ],
+      'planting': [
+        { label: 'Transplant heat',       metric: 'tmax_max',   op: '>=', red: 35, yellow: 32, advisory: 'Transplant shock at high temps' },
+      ],
+      'offseason': [{ label: 'Off-season', metric: null, advisory: 'Field is fallow' }],
+    },
+  },
+  'Asparagus': {
+    cycle_key: 'Asparagus',
+    fallback_share: [0.05, 0.30, 0.45, 0.20, 0, 0, 0, 0, 0, 0, 0, 0],
+    color: '#993556',
+    phase_risks: {
+      'harvest': [
+        { label: 'Spear frost',           metric: 'tmin_min',   op: '<=', red: 0,  yellow: 3,  advisory: 'Emerging spears killed at freezing' },
+        { label: 'Spear toughening (heat)',metric: 'tmax_max',  op: '>=', red: 32, yellow: 28, advisory: 'Above 28°C spears lignify and fiber-up quickly' },
+      ],
+      'growing': [
+        { label: 'Fern heat stress',      metric: 'tmax_max',   op: '>=', red: 42, yellow: 38, advisory: 'Above 38°C reduces fern photosynthesis (next year\'s spear energy)' },
+      ],
+      'offseason': [{ label: 'Crown dormancy', metric: null, advisory: 'Crowns dormant — minimal weather sensitivity' }],
+    },
+  },
+};
+
+let selectedHealthCrop = null; // null = auto-select focus crop
+
+function computeRevenueShare(monthIdx) {
+  // Actual historical share by current month, from Videxport liquidations
+  const sameMonth = VID.filter(r => r.date && r.date.getMonth() === monthIdx);
+  if (sameMonth.length === 0) return null;
+  const byCrop = {};
+  sameMonth.forEach(r => {
+    const c = (r.crop || '').trim();
+    if (!c) return;
+    byCrop[c] = (byCrop[c] || 0) + (r.sale || 0);
+  });
+  const total = Object.values(byCrop).reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  const share = {};
+  Object.keys(byCrop).forEach(c => { share[c] = byCrop[c] / total; });
+  return share;
+}
+
+function getRevenueShare(monthIdx) {
+  const actual = computeRevenueShare(monthIdx);
+  if (actual) {
+    const limited = {};
+    Object.keys(CROP_PROFILES).forEach(c => { limited[c] = actual[c] || 0; });
+    const sum = Object.values(limited).reduce((a, b) => a + b, 0);
+    if (sum > 0) return { source: 'actual', shares: limited };
+  }
+  // Fallback to typical season mix from CROP_PROFILES
+  const fallback = {};
+  Object.keys(CROP_PROFILES).forEach(c => { fallback[c] = CROP_PROFILES[c].fallback_share[monthIdx] || 0; });
+  const sum = Object.values(fallback).reduce((a, b) => a + b, 0);
+  if (sum > 0) {
+    Object.keys(fallback).forEach(c => { fallback[c] = fallback[c] / sum; });
+  }
+  return { source: 'fallback', shares: fallback };
+}
+
+function computeCropMetrics(daily, daysAhead) {
+  daysAhead = daysAhead || 7;
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  const idx = daily.time.findIndex(t => new Date(t) >= today0);
+  const start = idx >= 0 ? idx : 0;
+  const tmax = daily.temperature_2m_max.slice(start, start + daysAhead).filter(v => v != null);
+  const tmin = daily.temperature_2m_min.slice(start, start + daysAhead).filter(v => v != null);
+  const precip = daily.precipitation_sum.slice(start, start + daysAhead).filter(v => v != null);
+  return {
+    tmax_max: tmax.length ? Math.max.apply(null, tmax) : null,
+    tmax_avg: tmax.length ? tmax.reduce((a,b)=>a+b,0) / tmax.length : null,
+    tmin_min: tmin.length ? Math.min.apply(null, tmin) : null,
+    tmin_avg: tmin.length ? tmin.reduce((a,b)=>a+b,0) / tmin.length : null,
+    precip_max: precip.length ? Math.max.apply(null, precip) : null,
+    precip_sum: precip.length ? precip.reduce((a,b)=>a+b,0) : null,
+  };
+}
+
+function evalRisk(risk, metrics) {
+  if (!risk.metric) return { status: 'gray', value: '—' };
+  const v = metrics[risk.metric];
+  if (v == null) return { status: 'gray', value: 'no data' };
+  let status;
+  if (risk.op === '>=') status = v >= risk.red ? 'red' : v >= risk.yellow ? 'yellow' : 'green';
+  else if (risk.op === '<=') status = v <= risk.red ? 'red' : v <= risk.yellow ? 'yellow' : 'green';
+  else status = 'gray';
+  const valStr = risk.metric.indexOf('precip') === 0 ? v.toFixed(1) + ' mm' : v.toFixed(1) + '°C';
+  return { status: status, value: valStr };
+}
+
+function renderCropHealthMonitor() {
+  const content = document.getElementById('health-content');
+  if (!content) return;
+  if (!weatherCache || !weatherCache.daily) {
+    content.innerHTML = '<div style="font-size:12px;color:var(--c-muted);padding:8px 0">Loading weather model…</div>';
+    return;
+  }
+
+  const now = new Date();
+  const month = now.getMonth();
+  const revInfo = getRevenueShare(month);
+  const shares = revInfo.shares;
+  const totalShare = Object.values(shares).reduce((a, b) => a + b, 0);
+
+  // Determine focus crop = max share
+  let focusCrop = Object.keys(CROP_PROFILES)[0], maxShare = -1;
+  Object.keys(CROP_PROFILES).forEach(c => {
+    if ((shares[c] || 0) > maxShare) { maxShare = shares[c] || 0; focusCrop = c; }
+  });
+
+  const selected = (selectedHealthCrop && CROP_PROFILES[selectedHealthCrop]) ? selectedHealthCrop : focusCrop;
+  const profile = CROP_PROFILES[selected];
+  const cycleEntry = CROP_CYCLE[profile.cycle_key];
+  const phase = cycleEntry ? cycleEntry[month][0] : 'offseason';
+  const phaseLabel = cycleEntry ? cycleEntry[month][1] : 'Off-season';
+  const risks = profile.phase_risks[phase] || [];
+
+  const metrics = computeCropMetrics(weatherCache.daily, 7);
+  const evaluated = risks.map(r => Object.assign({}, r, evalRisk(r, metrics)));
+
+  const statuses = evaluated.filter(e => e.metric).map(e => e.status);
+  let overall;
+  if (statuses.includes('red')) overall = 'red';
+  else if (statuses.includes('yellow')) overall = 'yellow';
+  else if (statuses.length === 0) overall = 'gray';
+  else overall = 'green';
+  const overallLabel = { green: 'HEALTHY', yellow: 'WATCH', red: 'ALERT', gray: 'N/A' }[overall];
+
+  // ── Revenue bar ────
+  const segs = Object.keys(CROP_PROFILES)
+    .map(c => ({ name: c, share: shares[c] || 0, color: CROP_PROFILES[c].color }))
+    .filter(c => c.share > 0)
+    .sort((a, b) => b.share - a.share);
+  let revBarHtml;
+  if (segs.length > 0) {
+    revBarHtml = '<div class="rev-bar">' + segs.map(c => {
+      const pct = (c.share / totalShare * 100);
+      const label = pct >= 8 ? (c.name + ' ' + pct.toFixed(0) + '%') : '';
+      return '<div class="rev-seg" style="width:' + pct.toFixed(2) + '%;background:' + c.color + '" title="' + c.name + ': ' + pct.toFixed(0) + '%">' + label + '</div>';
+    }).join('') + '</div>';
+  } else {
+    revBarHtml = '<div style="font-size:12px;color:var(--c-muted);padding:6px 0">No active revenue crops this month — all in off-season or growing phase.</div>';
+  }
+
+  // ── Tabs ────
+  const tabsHtml = '<div class="crop-tabs">' + Object.keys(CROP_PROFILES).map(c => {
+    const cls = ['crop-tab'];
+    if (c === selected) cls.push('active');
+    if (c === focusCrop && (shares[c] || 0) > 0) cls.push('focus');
+    if ((shares[c] || 0) === 0) cls.push('dim');
+    const pct = ((shares[c] || 0) * 100).toFixed(0);
+    return '<button class="' + cls.join(' ') + '" onclick="selectHealthCrop(\'' + c.replace(/'/g, "\\'") + '\')">' +
+      c + '<span class="tab-share">' + pct + '%</span></button>';
+  }).join('') + '</div>';
+
+  // ── Risk list / off-season note ────
+  let riskHtml;
+  if (evaluated.length === 0) {
+    riskHtml = '<div style="font-size:12px;color:var(--c-muted);padding:12px 0">No phase-specific stress profile defined.</div>';
+  } else if (evaluated.every(e => !e.metric)) {
+    riskHtml = '<div style="font-size:13px;color:var(--c-muted);padding:12px 0;font-style:italic;">' + evaluated[0].advisory + '</div>';
+  } else {
+    riskHtml = '<div class="risk-list">' + evaluated.map(r => {
+      const badge = { green: 'CLEAR', yellow: 'WATCH', red: 'ALERT', gray: 'N/A' }[r.status];
+      return '<div class="risk-item">' +
+        '<div><div class="risk-label">' + r.label + '</div><div class="risk-advisory">' + r.advisory + '</div></div>' +
+        '<div class="risk-value">' + r.value + '</div>' +
+        '<div class="risk-status ' + r.status + '">' + badge + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  // ── Outlook ────
+  let outlook = '';
+  if (metrics.tmax_avg != null) {
+    outlook = '<div class="crop-outlook"><strong>7-day Hermosillo outlook:</strong> ' +
+      'highs avg ' + metrics.tmax_avg.toFixed(0) + '°C (peak ' + metrics.tmax_max.toFixed(0) + '°C) · ' +
+      'lows avg ' + (metrics.tmin_avg != null ? metrics.tmin_avg.toFixed(0) : '—') + '°C (min ' + (metrics.tmin_min != null ? metrics.tmin_min.toFixed(0) : '—') + '°C) · ' +
+      'total precip ' + (metrics.precip_sum != null ? metrics.precip_sum.toFixed(1) : '—') + ' mm' +
+    '</div>';
+  }
+
+  // ── Compose ────
+  const phaseNote = phase === 'harvest' ? ' — this crop\'s active revenue window'
+                  : phase === 'growing'  ? ' — pre-harvest, weather affects yield potential'
+                  : phase === 'planting' ? ' — establishing the crop'
+                  : phase === 'pruning'  ? ' — dormant management work'
+                  : ' — out of season';
+  const sourceNote = revInfo.source === 'actual' ? 'based on historical Videxport revenue' : 'typical Sonora season mix';
+
+  content.innerHTML =
+    '<div class="rev-focus">' +
+      '<div class="rev-focus-title">' + MONTH_NAMES[month] + ' revenue mix — current focus crop: <strong>' + focusCrop + '</strong> (' + sourceNote + ')</div>' +
+      revBarHtml +
+    '</div>' +
+    tabsHtml +
+    '<div class="crop-detail">' +
+      '<div class="crop-detail-header">' +
+        '<div>' +
+          '<div class="crop-name">' + selected + (selected === focusCrop ? ' &starf;' : '') + '</div>' +
+          '<div class="crop-phase">Currently in <strong>' + phaseLabel + '</strong>' + phaseNote + '</div>' +
+        '</div>' +
+        '<div class="crop-overall ' + overall + '">' + overallLabel + '</div>' +
+      '</div>' +
+      riskHtml +
+      outlook +
+    '</div>';
+}
+
+function selectHealthCrop(crop) {
+  selectedHealthCrop = crop;
+  renderCropHealthMonitor();
+}
+window.selectHealthCrop = selectHealthCrop;
 
 // ── Password gate ─────────────────────────────────────────────
 // Hash is SHA-256 of your chosen password (hex string).
