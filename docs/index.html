@@ -1721,18 +1721,26 @@ function computeRevenueShare(monthIdx) {
 
 function getRevenueShare(monthIdx) {
   const actual = computeRevenueShare(monthIdx);
-  if (actual) {
-    const limited = {};
-    Object.keys(CROP_PROFILES).forEach(c => { limited[c] = actual[c] || 0; });
-    const sum = Object.values(limited).reduce((a, b) => a + b, 0);
-    if (sum > 0) return { source: 'actual', shares: limited };
+  const limited = {};
+  Object.keys(CROP_PROFILES).forEach(c => { limited[c] = (actual && actual[c]) || 0; });
+  const nonZero = Object.keys(limited).filter(c => limited[c] > 0);
+  const actualSum = Object.values(limited).reduce((a, b) => a + b, 0);
+
+  // Use actual only when ≥2 crops appear (otherwise the file is incomplete —
+  // Videxport's liquidations CSV is currently grape-only, which would make
+  // the bar misleadingly 100% grape even in mixed-harvest months).
+  if (actualSum > 0 && nonZero.length >= 2) {
+    return { source: 'actual', shares: limited };
   }
-  // Fallback to typical season mix from CROP_PROFILES
+
+  // Build typical Sonora season mix as the displayed shares
   const fallback = {};
   Object.keys(CROP_PROFILES).forEach(c => { fallback[c] = CROP_PROFILES[c].fallback_share[monthIdx] || 0; });
-  const sum = Object.values(fallback).reduce((a, b) => a + b, 0);
-  if (sum > 0) {
-    Object.keys(fallback).forEach(c => { fallback[c] = fallback[c] / sum; });
+  const fSum = Object.values(fallback).reduce((a, b) => a + b, 0);
+  if (fSum > 0) Object.keys(fallback).forEach(c => { fallback[c] = fallback[c] / fSum; });
+
+  if (actualSum > 0 && nonZero.length === 1) {
+    return { source: 'fallback-with-gap', shares: fallback, onlyCropInData: nonZero[0] };
   }
   return { source: 'fallback', shares: fallback };
 }
@@ -1865,12 +1873,25 @@ function renderCropHealthMonitor() {
                   : phase === 'planting' ? ' — establishing the crop'
                   : phase === 'pruning'  ? ' — dormant management work'
                   : ' — out of season';
-  const sourceNote = revInfo.source === 'actual' ? 'based on historical Videxport revenue' : 'typical Sonora season mix';
+
+  let sourceNote, gapNote = '';
+  if (revInfo.source === 'actual') {
+    sourceNote = 'historical Videxport revenue mix';
+  } else if (revInfo.source === 'fallback-with-gap') {
+    sourceNote = 'typical Sonora season mix';
+    gapNote = '<div style="font-size:11px;color:var(--c-warn);background:#faf0d9;border-left:3px solid var(--c-warn);padding:6px 10px;margin-top:8px;border-radius:3px;">' +
+      '<strong>Data gap:</strong> Videxport liquidations CSV currently contains <strong>' + revInfo.onlyCropInData +
+      '</strong> only. Other crops shown reflect typical Sonora seasonality, not Videxport\'s actual book — add ' +
+      'their liquidations to <code style="font-size:10px;background:#fff;padding:1px 4px;border-radius:2px">videxport_liquidations.csv</code> to drive this from real revenue.</div>';
+  } else {
+    sourceNote = 'typical Sonora season mix (no liquidations data)';
+  }
 
   content.innerHTML =
     '<div class="rev-focus">' +
       '<div class="rev-focus-title">' + MONTH_NAMES[month] + ' revenue mix — current focus crop: <strong>' + focusCrop + '</strong> (' + sourceNote + ')</div>' +
       revBarHtml +
+      gapNote +
     '</div>' +
     tabsHtml +
     '<div class="crop-detail">' +
