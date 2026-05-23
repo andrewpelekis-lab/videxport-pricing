@@ -8,20 +8,25 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap">
 <style>
   :root {
-    --c-bg: #f8f8f6;
-    --c-card: #ffffff;
-    --c-border: rgba(0,0,0,0.10);
-    --c-border-strong: rgba(0,0,0,0.20);
-    --c-text: #1a1a1a;
-    --c-muted: #6b6b66;
-    --c-accent: #1F3864;
-    --c-good: #1D9E75;
-    --c-warn: #BA7517;
-    --c-bad: #A32D2D;
+    /* Nord45 Partners palette — extracted from 260522 Key Deal Points deck */
+    --c-bg:             #FBFAF3;   /* cream page background */
+    --c-card:           #FDFCF7;   /* off-white surface */
+    --c-border:         #E2E0D7;   /* stone divider */
+    --c-border-strong:  #C9CCC8;
+    --c-text:           #2A2F2A;   /* charcoal body */
+    --c-muted:          #6B6F6B;
+    --c-accent:         #02360A;   /* deep forest green — primary */
+    --c-accent-2:       #044D04;   /* secondary green */
+    --c-good:           #02360A;
+    --c-warn:           #B48B2A;   /* brass / gold */
+    --c-bad:            #8B2A2A;
+    --c-sage:           #C5D1BD;   /* sage tint (success surface) */
+    --c-brass-tint:     #F5E6C5;   /* brass tint (warn surface) */
+    --c-rose-tint:      #F0D6D6;   /* rose tint (alert surface) */
   }
   * { box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "Carlito", "Calibri", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--c-bg);
     color: var(--c-text);
     margin: 0;
@@ -181,10 +186,10 @@
   .trigger:first-of-type { border-top: 0; }
   .trigger-label { font-size: 13px; }
   .trigger-status { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 12px; }
-  .trigger-status.green { background: #e6f4ee; color: var(--c-good); }
-  .trigger-status.yellow { background: #faf0d9; color: var(--c-warn); }
-  .trigger-status.red { background: #fae6e6; color: var(--c-bad); }
-  .trigger-status.gray { background: #efefec; color: var(--c-muted); }
+  .trigger-status.green { background: var(--c-sage); color: var(--c-good); }
+  .trigger-status.yellow { background: var(--c-brass-tint); color: var(--c-warn); }
+  .trigger-status.red { background: var(--c-rose-tint); color: var(--c-bad); }
+  .trigger-status.gray { background: var(--c-border); color: var(--c-muted); }
 
   .empty-state {
     background: var(--c-card);
@@ -244,10 +249,10 @@
   .deal-metric { font-size: 22px; font-weight: 500; color: var(--c-text); margin-bottom: 4px; line-height: 1.1; }
   .deal-detail { font-size: 11px; color: var(--c-muted); line-height: 1.4; min-height: 30px; }
   .deal-badge { position: absolute; top: 12px; right: 14px; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 10px; }
-  .deal-badge-green  { background: #e6f4ee; color: var(--c-good); }
-  .deal-badge-yellow { background: #faf0d9; color: var(--c-warn); }
-  .deal-badge-red    { background: #fae6e6; color: var(--c-bad);  }
-  .deal-badge-gray   { background: #efefec; color: var(--c-muted); }
+  .deal-badge-green  { background: var(--c-sage); color: var(--c-good); }
+  .deal-badge-yellow { background: var(--c-brass-tint); color: var(--c-warn); }
+  .deal-badge-red    { background: var(--c-rose-tint); color: var(--c-bad);  }
+  .deal-badge-gray   { background: var(--c-border); color: var(--c-muted); }
   @media (max-width: 900px) { .deal-status-grid { grid-template-columns: repeat(2, 1fr); } }
 
   /* ── Crop Cycle Calendar ──────────────────────────────────────── */
@@ -271,15 +276,15 @@
   .cycle-label { font-size: 12px; font-weight: 500; color: var(--c-text); }
   .cycle-status { font-size: 10px; color: var(--c-muted); font-weight: 400; margin-top: 2px; }
   .cycle-bar { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; height: 28px; }
-  .cycle-cell { border-radius: 2px; cursor: help; background: #efefec; transition: opacity 0.15s; }
+  .cycle-cell { border-radius: 2px; cursor: help; background: var(--c-border); transition: opacity 0.15s; }
   .cycle-cell:hover { opacity: 0.85; }
-  .cycle-cell.planting  { background: #185FA5; }
-  .cycle-cell.growing   { background: #1D9E75; }
-  .cycle-cell.harvest   { background: #D85A30; }
-  .cycle-cell.pruning   { background: #BA7517; }
-  .cycle-cell.offseason { background: #C0BFB8; }
-  .cycle-today-marker { position: absolute; top: 28px; bottom: 0; width: 2px; background: #A32D2D; pointer-events: none; z-index: 5; }
-  .cycle-today-label { position: absolute; top: -26px; left: 4px; font-size: 10px; font-weight: 500; color: #A32D2D; background: #fff; border: 1px solid #A32D2D; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  .cycle-cell.planting  { background: #B48B2A; }  /* brass */
+  .cycle-cell.growing   { background: #8EA888; }  /* sage */
+  .cycle-cell.harvest   { background: #02360A; }  /* forest green = revenue */
+  .cycle-cell.pruning   { background: #6B6F6B; }  /* muted stone */
+  .cycle-cell.offseason { background: #D4DCCD; }  /* pale sage */
+  .cycle-today-marker { position: absolute; top: 28px; bottom: 0; width: 2px; background: #B48B2A; pointer-events: none; z-index: 5; }
+  .cycle-today-label { position: absolute; top: -26px; left: 4px; font-size: 10px; font-weight: 500; color: var(--c-warn); background: var(--c-card); border: 1px solid var(--c-warn); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
   .paca-note { font-size: 11px; color: var(--c-muted); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--c-border); }
   .paca-note strong { color: var(--c-accent); }
 
@@ -291,7 +296,7 @@
   .rev-focus { margin-bottom: 14px; }
   .rev-focus-title { font-size: 11px; color: var(--c-muted); margin-bottom: 6px; }
   .rev-focus-title strong { color: var(--c-text); font-weight: 600; }
-  .rev-bar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; gap: 1px; background: #f0f0ec; }
+  .rev-bar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; gap: 1px; background: var(--c-border); }
   .rev-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 500; padding: 0 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .crop-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--c-border); margin-bottom: 16px; }
@@ -308,10 +313,10 @@
   .crop-phase { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
   .crop-phase strong { color: var(--c-accent); }
   .crop-overall { font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 12px; white-space: nowrap; }
-  .crop-overall.green  { background: #e6f4ee; color: var(--c-good); }
-  .crop-overall.yellow { background: #faf0d9; color: var(--c-warn); }
-  .crop-overall.red    { background: #fae6e6; color: var(--c-bad);  }
-  .crop-overall.gray   { background: #efefec; color: var(--c-muted); }
+  .crop-overall.green  { background: var(--c-sage); color: var(--c-good); }
+  .crop-overall.yellow { background: var(--c-brass-tint); color: var(--c-warn); }
+  .crop-overall.red    { background: var(--c-rose-tint); color: var(--c-bad);  }
+  .crop-overall.gray   { background: var(--c-border); color: var(--c-muted); }
 
   .risk-list { display: flex; flex-direction: column; }
   .risk-item { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--c-border); }
@@ -320,10 +325,10 @@
   .risk-advisory { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
   .risk-value { font-size: 12px; color: var(--c-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .risk-status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; }
-  .risk-status.green  { background: #e6f4ee; color: var(--c-good); }
-  .risk-status.yellow { background: #faf0d9; color: var(--c-warn); }
-  .risk-status.red    { background: #fae6e6; color: var(--c-bad);  }
-  .risk-status.gray   { background: #efefec; color: var(--c-muted); }
+  .risk-status.green  { background: var(--c-sage); color: var(--c-good); }
+  .risk-status.yellow { background: var(--c-brass-tint); color: var(--c-warn); }
+  .risk-status.red    { background: var(--c-rose-tint); color: var(--c-bad);  }
+  .risk-status.gray   { background: var(--c-border); color: var(--c-muted); }
 
   .crop-outlook { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--c-border); font-size: 12px; color: var(--c-muted); line-height: 1.5; }
   .crop-outlook strong { color: var(--c-accent); }
@@ -355,24 +360,32 @@
      Typography: Carlito (Calibri-equivalent, Google Fonts) for everything.
   */
   @media print {
-    /* Running footer on every page except cover */
+    /* Full-bleed cream: zero top/side margins so background hits the
+       page edges. A 0.45in bottom strip is reserved for the running
+       footer and gets the cream background too via @page background. */
     @page {
       size: letter portrait;
-      margin: 0.55in 0.5in 0.7in;
-      @bottom-left  { content: "NORD 45 PARTNERS"; font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; letter-spacing: 1pt; }
+      margin: 0 0 0.45in 0;
+      background: #FBFAF3;
+      @bottom-left  { content: "NORD 45 PARTNERS"; font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; letter-spacing: 1pt; margin-left: 0.5in; }
       @bottom-center{ content: "STRICTLY PRIVATE & CONFIDENTIAL"; font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; letter-spacing: 1.5pt; }
-      @bottom-right { content: counter(page) " / " counter(pages); font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; }
+      @bottom-right { content: counter(page) " / " counter(pages); font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; margin-right: 0.5in; }
     }
+    /* Cover page: truly edge-to-edge — no footer, no margins */
     @page :first {
+      margin: 0;
       @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: ""; }
     }
 
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    html { background: #FBFAF3 !important; }
     body {
-      background: #FBFAF3;
+      background: #FBFAF3 !important;
       color: #2A2F2A;
       font-family: "Carlito", "Calibri", "Lato", "Helvetica Neue", sans-serif !important;
       font-size: 9.5pt; line-height: 1.45;
+      margin: 0 !important;
+      padding: 0.45in 0.5in 0.15in !important;
     }
 
     /* Hide all interactive controls + screen header */
@@ -391,7 +404,7 @@
       page-break-after: always;
       padding: 0;
       margin: 0;
-      min-height: 9.2in;
+      min-height: 10in;
       display: flex; flex-direction: column;
       position: relative;
     }
@@ -425,10 +438,16 @@
       text-transform: uppercase; font-weight: 700;
     }
     .print-cover-title {
-      font-size: 56pt; font-weight: 400; color: #02360A;
-      line-height: 1.02; letter-spacing: -1.2pt;
-      margin-top: 14pt;
-      font-style: italic;
+      margin-top: 18pt;
+    }
+    .print-cover-borrower {
+      font-size: 84pt; font-weight: 400; font-style: italic;
+      color: #02360A; line-height: 0.95; letter-spacing: -2.5pt;
+    }
+    .print-cover-bigdate {
+      font-size: 38pt; font-weight: 400; font-style: italic;
+      color: #044D04; line-height: 1.1; letter-spacing: -0.5pt;
+      margin-top: 8pt;
     }
     .print-cover-tagline {
       margin-top: 32pt;
@@ -654,7 +673,10 @@
     </div>
 
     <div class="print-cover-badge">Facility Surveillance &mdash; Videxport / Santa In&eacute;s</div>
-    <div class="print-cover-title">Facility status,<br>at a glance.</div>
+    <div class="print-cover-title">
+      <div class="print-cover-borrower">Videxport</div>
+      <div class="print-cover-bigdate" id="print-cover-bigdate">&mdash;</div>
+    </div>
     <div class="print-cover-tagline">
       Independent week-on-week surveillance of the <strong>Seasonal Receivables-Backed Working Capital Facility</strong>
       &mdash; prices, deliveries, crop health and PACA collateral coverage as of
@@ -1939,7 +1961,7 @@ const CROP_PROFILES = {
   'Grape': {
     cycle_key: 'Grape (table)',
     fallback_share: [0, 0, 0, 0.05, 0.45, 0.40, 0.10, 0, 0, 0, 0, 0],
-    color: '#534AB7',
+    color: '#02360A',  // forest green
     phase_risks: {
       'harvest': [
         { label: 'Berry sunburn',         metric: 'tmax_max',   op: '>=', red: 40, yellow: 38, advisory: 'Direct sun on exposed clusters scorches berries' },
@@ -1957,7 +1979,7 @@ const CROP_PROFILES = {
   'Watermelon': {
     cycle_key: 'Watermelon',
     fallback_share: [0.05, 0.05, 0.05, 0.20, 0.40, 0.20, 0.05, 0, 0, 0, 0, 0],
-    color: '#1D9E75',
+    color: '#8EA888',  // sage
     phase_risks: {
       'harvest': [
         { label: 'Fruit split',           metric: 'precip_max', op: '>=', red: 10, yellow: 5,  advisory: 'Mature melons crack with heavy rain' },
@@ -1977,7 +1999,7 @@ const CROP_PROFILES = {
   'Honeydew': {
     cycle_key: 'Honeydew',
     fallback_share: [0, 0.15, 0.35, 0.30, 0.15, 0.05, 0, 0, 0, 0, 0, 0],
-    color: '#185FA5',
+    color: '#C5D1BD',  // pale sage
     phase_risks: {
       'harvest': [
         { label: 'Fruit cracking',        metric: 'precip_max', op: '>=', red: 10, yellow: 5,  advisory: 'Ripe melons split with rain' },
@@ -1995,7 +2017,7 @@ const CROP_PROFILES = {
   'Bell Pepper': {
     cycle_key: 'Bell Pepper',
     fallback_share: [0.20, 0.25, 0.25, 0.15, 0.10, 0, 0, 0, 0, 0, 0, 0.05],
-    color: '#BA7517',
+    color: '#B48B2A',  // brass
     phase_risks: {
       'harvest': [
         { label: 'Chilling injury',       metric: 'tmin_min',   op: '<=', red: 5,  yellow: 10, advisory: 'Pepper fruit damaged below 10°C' },
@@ -2015,7 +2037,7 @@ const CROP_PROFILES = {
   'Asparagus': {
     cycle_key: 'Asparagus',
     fallback_share: [0.05, 0.30, 0.45, 0.20, 0, 0, 0, 0, 0, 0, 0, 0],
-    color: '#993556',
+    color: '#6B6F6B',  // stone
     phase_risks: {
       'harvest': [
         { label: 'Spear frost',           metric: 'tmin_min',   op: '<=', red: 0,  yellow: 3,  advisory: 'Emerging spears killed at freezing' },
@@ -2208,7 +2230,7 @@ function renderCropHealthMonitor() {
     sourceNote = 'historical Videxport revenue mix';
   } else if (revInfo.source === 'fallback-with-gap') {
     sourceNote = 'typical Sonora season mix';
-    gapNote = '<div style="font-size:11px;color:var(--c-warn);background:#faf0d9;border-left:3px solid var(--c-warn);padding:6px 10px;margin-top:8px;border-radius:3px;">' +
+    gapNote = '<div style="font-size:11px;color:var(--c-warn);background:var(--c-brass-tint);border-left:3px solid var(--c-warn);padding:6px 10px;margin-top:8px;border-radius:3px;">' +
       '<strong>Data gap:</strong> Videxport liquidations CSV currently contains <strong>' + revInfo.onlyCropInData +
       '</strong> only. Other crops shown reflect typical Sonora seasonality, not Videxport\'s actual book — add ' +
       'their liquidations to <code style="font-size:10px;background:#fff;padding:1px 4px;border-radius:2px">videxport_liquidations.csv</code> to drive this from real revenue.</div>';
@@ -2249,9 +2271,12 @@ function renderExecutiveSummary() {
   if (!dateEl || !bodyEl) return;
 
   const now = new Date();
-  dateEl.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const longDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  dateEl.textContent = longDate;
   const monthEl = document.getElementById('print-cover-month');
   if (monthEl) monthEl.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  const bigDateEl = document.getElementById('print-cover-bigdate');
+  if (bigDateEl) bigDateEl.textContent = longDate;
 
   // Latest realized price + YoY
   const dated = VID.filter(r => r.date);
