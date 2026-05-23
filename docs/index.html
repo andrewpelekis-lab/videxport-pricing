@@ -324,6 +324,133 @@
 
   .crop-outlook { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--c-border); font-size: 12px; color: var(--c-muted); line-height: 1.5; }
   .crop-outlook strong { color: var(--c-accent); }
+
+  /* ── Report button + print cover ────────────────────────────── */
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .report-btn {
+    font-size: 12px; padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 6px;
+    background: rgba(255,255,255,0.08); color: #fff;
+    cursor: pointer; font-family: inherit; font-weight: 500;
+    white-space: nowrap;
+  }
+  .report-btn:hover { background: rgba(255,255,255,0.18); }
+
+  .print-cover, .exec-summary { display: none; }
+
+  /* ── @media print ───────────────────────────────────────────── */
+  @media print {
+    @page { size: letter portrait; margin: 0.5in; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff; font-size: 9.5pt; line-height: 1.4; }
+
+    /* Hide all interactive controls */
+    #password-gate, .data-banner, .refresh-btn, .report-btn,
+    .controls, .crop-tabs, .bridge-controls, #debug { display: none !important; }
+
+    /* Reveal print-only sections */
+    .print-cover { display: block !important; }
+    .exec-summary { display: block !important; }
+
+    .container { padding: 0; max-width: 100%; }
+
+    /* Header — compact print version */
+    header { padding: 8pt 12pt !important; page-break-after: avoid; }
+    header h1 { font-size: 13pt !important; }
+    header .sub { font-size: 9pt !important; }
+    .header-right { display: none !important; }
+
+    /* Print cover styling */
+    .print-cover {
+      text-align: center;
+      padding: 24pt 0 16pt;
+      margin-bottom: 18pt;
+      border-bottom: 2pt solid #1F3864;
+    }
+    .print-cover-title { font-size: 24pt; color: #1F3864; font-weight: 500; margin-bottom: 6pt; letter-spacing: -0.5pt; }
+    .print-cover-subtitle { font-size: 14pt; color: #6b6b66; font-weight: 400; margin-bottom: 12pt; }
+    .print-cover-date { font-size: 11pt; color: #1a1a1a; font-weight: 500; }
+    .print-cover-meta { font-size: 9pt; color: #6b6b66; margin-top: 6pt; font-style: italic; }
+
+    /* Executive summary block */
+    .exec-summary {
+      background: #f8f8f6;
+      border-left: 3pt solid #1F3864;
+      padding: 10pt 12pt;
+      margin-bottom: 16pt;
+      page-break-inside: avoid;
+      page-break-after: avoid;
+    }
+    .exec-summary h3 { margin: 0 0 6pt; font-size: 10pt; color: #1F3864; text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 600; }
+    .exec-line { font-size: 10pt; line-height: 1.55; margin-bottom: 3pt; color: #1a1a1a; }
+    .exec-line strong { color: #1F3864; }
+
+    /* Card layout */
+    .deal-status-section, .crop-cycle-card, .health-monitor-card,
+    .chart-card, .trigger-card {
+      page-break-inside: avoid;
+      box-shadow: none !important;
+      border: 1pt solid #ddd !important;
+      border-radius: 4pt !important;
+      margin-bottom: 10pt !important;
+      padding: 10pt 12pt !important;
+    }
+    .deal-card { padding: 10pt 12pt !important; }
+    .deal-status-title { font-size: 12pt !important; }
+    .deal-status-sub { font-size: 9pt !important; }
+    .deal-status-grid { gap: 6pt !important; }
+    .deal-label { font-size: 8pt !important; padding-right: 50pt !important; }
+    .deal-metric { font-size: 14pt !important; }
+    .deal-detail { font-size: 8.5pt !important; min-height: auto !important; }
+    .deal-badge { font-size: 8pt !important; padding: 2pt 6pt !important; top: 8pt !important; right: 10pt !important; }
+
+    /* Section spacing */
+    h2 { font-size: 11pt !important; margin-bottom: 4pt !important; }
+    .desc { font-size: 9pt !important; margin-bottom: 8pt !important; }
+
+    /* Charts — paper-friendly heights */
+    .chart-wrap { height: 240pt !important; page-break-inside: avoid; }
+
+    /* Crop cycle */
+    .cycle-header-row, .cycle-row { grid-template-columns: 110pt 1fr !important; }
+    .cycle-label { font-size: 9pt !important; }
+    .cycle-status { font-size: 8pt !important; }
+    .cycle-bar { height: 20pt !important; }
+    .cycle-today-marker { top: 22pt !important; }
+    .cycle-today-label { font-size: 8pt !important; }
+    .paca-note { font-size: 8pt !important; }
+
+    /* Crop Health — show selected crop content only */
+    .crop-detail-header { margin-bottom: 8pt !important; }
+    .crop-name { font-size: 13pt !important; }
+    .risk-item { padding: 5pt 0 !important; font-size: 9pt !important; }
+    .risk-label { font-size: 9pt !important; }
+    .risk-advisory { font-size: 8pt !important; }
+    .crop-outlook { font-size: 8.5pt !important; margin-top: 8pt !important; padding-top: 6pt !important; }
+
+    /* Bridge panel */
+    .bridge-kpis { gap: 6pt !important; }
+    .bridge-kpis .kpi { padding: 6pt 8pt !important; }
+    .bridge-footnotes { font-size: 7.5pt !important; }
+    .bridge-footnotes h4 { font-size: 9pt !important; }
+
+    /* Tables */
+    table.data { font-size: 8pt !important; }
+    table.data th, table.data td { padding: 3pt 5pt !important; }
+
+    /* Page breaks between major sections */
+    .health-monitor-card { page-break-before: auto; }
+    .chart-card#bridge-panel, .chart-card#weather-panel { page-break-before: page; }
+
+    /* Footer */
+    footer {
+      border-top: 1pt solid #ccc;
+      padding-top: 8pt;
+      margin-top: 16pt;
+      font-size: 8pt;
+      page-break-inside: avoid;
+    }
+  }
 </style>
 </head>
 <body>
@@ -344,10 +471,29 @@
     <h1>Videxport Pricing Surveillance Dashboard</h1>
     <div class="sub">USDA Nogales benchmark vs. Videxport realized — basis spread monitoring</div>
   </div>
-  <div class="sub" id="data-summary">Loading…</div>
+  <div class="header-right">
+    <div class="sub" id="data-summary">Loading…</div>
+    <button class="report-btn" onclick="generateReport()" title="Opens browser print dialog — choose 'Save as PDF' as destination">↓ PDF Report</button>
+  </div>
 </header>
 
 <div class="container">
+
+  <!-- Print-only report cover (hidden on screen) -->
+  <div class="print-cover">
+    <div class="print-cover-title">Videxport Pricing Surveillance</div>
+    <div class="print-cover-subtitle">Investor Status Report</div>
+    <div class="print-cover-date" id="print-cover-date"></div>
+    <div class="print-cover-meta">PACA-secured produce financing facility &middot; Hermosillo, Sonora &middot; USDA Nogales benchmark</div>
+  </div>
+
+  <!-- Print-only executive summary (hidden on screen) -->
+  <div class="exec-summary" id="exec-summary">
+    <h3>Executive Summary</h3>
+    <div id="exec-summary-body">
+      <div class="exec-line">Loading data&hellip;</div>
+    </div>
+  </div>
 
   <!-- Data status banner (replaces upload-zone) -->
   <div class="data-banner">
@@ -614,6 +760,7 @@ function tryRender() {
     renderCropCycle();
     renderDealStatus();
     renderCropHealthMonitor();
+    renderExecutiveSummary();
   } catch (e) { showError('tryRender', e); }
   document.getElementById('data-summary').textContent =
     USDA.length + ' USDA obs · ' + VID.length + ' liquidations';
@@ -1912,6 +2059,117 @@ function selectHealthCrop(crop) {
   renderCropHealthMonitor();
 }
 window.selectHealthCrop = selectHealthCrop;
+
+// ── PDF Report generation ─────────────────────────────────────
+function renderExecutiveSummary() {
+  const dateEl = document.getElementById('print-cover-date');
+  const bodyEl = document.getElementById('exec-summary-body');
+  if (!dateEl || !bodyEl) return;
+
+  const now = new Date();
+  dateEl.textContent = 'Report as of ' + now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Latest realized price + YoY
+  const dated = VID.filter(r => r.date);
+  const latest = dated.length ? dated.reduce((a, b) => a.date > b.date ? a : b) : null;
+  const d30 = new Date(now); d30.setDate(d30.getDate() - 30);
+  const recentVid = VID.filter(r => r.date && r.date >= d30);
+  const recentAvg = weightedAvg(recentVid);
+  const lyEnd = new Date(now); lyEnd.setFullYear(lyEnd.getFullYear() - 1);
+  const lyStart = new Date(lyEnd); lyStart.setDate(lyStart.getDate() - 30);
+  const priorVid = VID.filter(r => r.date && r.date >= lyStart && r.date <= lyEnd);
+  const priorAvg = weightedAvg(priorVid);
+  const recentRev = recentVid.reduce((a, r) => a + (r.sale || 0), 0);
+  const recentBoxes = recentVid.reduce((a, r) => a + (r.boxes || 0), 0);
+  const daysSince = latest ? Math.floor((now - latest.date) / 86400000) : null;
+  const yoyPct = (recentAvg > 0 && priorAvg > 0) ? ((recentAvg / priorAvg - 1) * 100) : null;
+
+  // Focus crop + phase
+  let focusCrop = '—', phaseLabel = '—', cropStatus = '—';
+  if (typeof CROP_PROFILES !== 'undefined') {
+    const month = now.getMonth();
+    const revInfo = getRevenueShare(month);
+    let maxShare = -1;
+    Object.keys(CROP_PROFILES).forEach(c => {
+      if ((revInfo.shares[c] || 0) > maxShare) { maxShare = revInfo.shares[c] || 0; focusCrop = c; }
+    });
+    const profile = CROP_PROFILES[focusCrop];
+    const cycleEntry = CROP_CYCLE[profile.cycle_key];
+    if (cycleEntry) phaseLabel = cycleEntry[month][1];
+
+    // Crop health verdict
+    if (weatherCache && weatherCache.daily) {
+      const phase = cycleEntry ? cycleEntry[month][0] : 'offseason';
+      const phaseRisks = (profile.phase_risks[phase] || []).filter(r => r.metric);
+      const metrics = computeCropMetrics(weatherCache.daily, 7);
+      const evaluated = phaseRisks.map(r => Object.assign({}, r, evalRisk(r, metrics)));
+      const statuses = evaluated.map(e => e.status);
+      cropStatus = statuses.includes('red') ? 'ALERT'
+                 : statuses.includes('yellow') ? 'WATCH'
+                 : statuses.length === 0 ? 'OFF-CYCLE'
+                 : 'HEALTHY';
+    }
+  }
+
+  // Overall deal health composite
+  const flowStatus = daysSince != null && daysSince <= 14 ? 'HEALTHY' :
+                     daysSince != null && daysSince <= 30 ? 'WATCH' :
+                     daysSince != null ? 'ALERT' : 'N/A';
+  const priceStatus = yoyPct == null ? 'N/A' : yoyPct >= -10 ? 'HEALTHY' : yoyPct >= -25 ? 'WATCH' : 'ALERT';
+  const allStatuses = [priceStatus, flowStatus, cropStatus].filter(s => s !== 'N/A');
+  const overall = allStatuses.includes('ALERT') ? 'ALERT'
+                : allStatuses.includes('WATCH') ? 'WATCH'
+                : 'HEALTHY';
+
+  const lines = [];
+  lines.push('<div class="exec-line">Facility status: <strong>' + overall +
+    '</strong> &nbsp;|&nbsp; Prices ' + priceStatus +
+    ' &nbsp;|&nbsp; Deliveries ' + flowStatus +
+    ' &nbsp;|&nbsp; Crops ' + cropStatus + '</div>');
+
+  if (recentAvg > 0) {
+    let pl = 'Latest 30-day realized price: <strong>$' + recentAvg.toFixed(2) + '/box</strong>';
+    if (yoyPct != null) pl += ' (' + (yoyPct >= 0 ? '+' : '') + yoyPct.toFixed(1) + '% YoY vs prior-year window of $' + priorAvg.toFixed(2) + ')';
+    lines.push('<div class="exec-line">' + pl + '</div>');
+  }
+
+  if (latest) {
+    lines.push('<div class="exec-line">Last delivery: <strong>' + fmtD(latest.date) + '</strong> (' + daysSince + ' days ago) · 30-day flow: <strong>' +
+      recentBoxes.toLocaleString() + ' boxes</strong> generating <strong>$' +
+      (recentRev / 1000).toFixed(0) + 'k</strong> of PACA-trust-protected receivables.</div>');
+  }
+
+  lines.push('<div class="exec-line">Current revenue focus: <strong>' + focusCrop + '</strong> in <strong>' + phaseLabel + '</strong> phase' +
+    (cropStatus !== '—' ? ' · weather model verdict: <strong>' + cropStatus + '</strong>' : '') + '.</div>');
+
+  lines.push('<div class="exec-line" style="margin-top:6pt;font-size:8.5pt;color:#6b6b66;">' +
+    'Data sources: USDA AMS shipping-point reports (IX_FV110 / IX_FV120) for Nogales · ' +
+    'Open-Meteo for Hermosillo weather model · Videxport liquidation files. ' +
+    'Collateral framework: PACA §499e(c) statutory super-priority trust.' +
+    '</div>');
+
+  bodyEl.innerHTML = lines.join('');
+}
+
+function generateReport() {
+  // Force charts to resize for current print layout, then trigger print.
+  renderExecutiveSummary();
+  document.querySelectorAll('canvas').forEach(c => {
+    const chart = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(c) : null;
+    if (chart) chart.resize();
+  });
+  setTimeout(() => window.print(), 150);
+}
+window.generateReport = generateReport;
+
+// Resize charts immediately before browser print dialog opens (Ctrl+P / Cmd+P)
+window.addEventListener('beforeprint', () => {
+  renderExecutiveSummary();
+  document.querySelectorAll('canvas').forEach(c => {
+    const chart = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(c) : null;
+    if (chart) chart.resize();
+  });
+});
 
 // ── Password gate ─────────────────────────────────────────────
 // Hash is SHA-256 of your chosen password (hex string).
