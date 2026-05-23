@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>Videxport Pricing Surveillance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap">
 <style>
   :root {
     --c-bg: #f8f8f6;
@@ -338,117 +341,277 @@
 
   .print-cover, .exec-summary { display: none; }
 
-  /* ── @media print ───────────────────────────────────────────── */
+  /* ── @media print — Nord45 Partners brand ─────────────────────
+     Palette extracted from Nord45 deck (260522 Key Deal Points):
+       Primary forest green  #02360A
+       Deep green accent     #006300 / #044D04
+       Brass / gold accent   #B48B2A
+       Body text             #2A2F2A
+       Muted text            #6B6F6B
+       Cream background      #F6F3EA / #FBFAF3
+       Off-white surface     #FDFCF7
+       Stone divider         #E2E0D7 / #C9CCC8
+       Sage tints            #C5D1BD / #D4DCCD
+     Typography: Carlito (Calibri-equivalent, Google Fonts) for everything.
+  */
   @media print {
-    @page { size: letter portrait; margin: 0.5in; }
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { background: #fff; font-size: 9.5pt; line-height: 1.4; }
+    /* Running footer on every page except cover */
+    @page {
+      size: letter portrait;
+      margin: 0.55in 0.5in 0.7in;
+      @bottom-left  { content: "NORD 45 PARTNERS"; font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; letter-spacing: 1pt; }
+      @bottom-center{ content: "STRICTLY PRIVATE & CONFIDENTIAL"; font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; letter-spacing: 1.5pt; }
+      @bottom-right { content: counter(page) " / " counter(pages); font-family: "Carlito", "Calibri", sans-serif; font-size: 7.5pt; color: #6B6F6B; }
+    }
+    @page :first {
+      @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: ""; }
+    }
 
-    /* Hide all interactive controls */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body {
+      background: #FBFAF3;
+      color: #2A2F2A;
+      font-family: "Carlito", "Calibri", "Lato", "Helvetica Neue", sans-serif !important;
+      font-size: 9.5pt; line-height: 1.45;
+    }
+
+    /* Hide all interactive controls + screen header */
     #password-gate, .data-banner, .refresh-btn, .report-btn,
-    .controls, .crop-tabs, .bridge-controls, #debug { display: none !important; }
+    .controls, .crop-tabs, .bridge-controls, #debug,
+    header { display: none !important; }
 
     /* Reveal print-only sections */
     .print-cover { display: block !important; }
     .exec-summary { display: block !important; }
 
-    .container { padding: 0; max-width: 100%; }
+    .container { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
 
-    /* Header — compact print version */
-    header { padding: 8pt 12pt !important; page-break-after: avoid; }
-    header h1 { font-size: 13pt !important; }
-    header .sub { font-size: 9pt !important; }
-    .header-right { display: none !important; }
-
-    /* Print cover styling */
+    /* ── COVER PAGE ─────────────────────────────────────────────── */
     .print-cover {
-      text-align: center;
-      padding: 24pt 0 16pt;
-      margin-bottom: 18pt;
-      border-bottom: 2pt solid #1F3864;
+      page-break-after: always;
+      padding: 0;
+      margin: 0;
+      min-height: 9.2in;
+      display: flex; flex-direction: column;
+      position: relative;
     }
-    .print-cover-title { font-size: 24pt; color: #1F3864; font-weight: 500; margin-bottom: 6pt; letter-spacing: -0.5pt; }
-    .print-cover-subtitle { font-size: 14pt; color: #6b6b66; font-weight: 400; margin-bottom: 12pt; }
-    .print-cover-date { font-size: 11pt; color: #1a1a1a; font-weight: 500; }
-    .print-cover-meta { font-size: 9pt; color: #6b6b66; margin-top: 6pt; font-style: italic; }
+    .print-cover-top {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding-bottom: 18pt;
+      border-bottom: 1pt solid #C9CCC8;
+    }
+    .print-cover-brand {
+      font-size: 14pt; font-weight: 700; color: #02360A;
+      letter-spacing: -0.3pt;
+    }
+    .print-cover-brand-mark {
+      display: inline-block; width: 9pt; height: 9pt;
+      background: #B48B2A; margin-right: 6pt; vertical-align: middle;
+      border-radius: 1pt;
+    }
+    .print-cover-stamp {
+      font-size: 8pt; color: #6B6F6B; letter-spacing: 2pt;
+      text-transform: uppercase; font-weight: 700;
+    }
+    .print-cover-section {
+      display: flex; justify-content: space-between;
+      padding: 14pt 0 0;
+      font-size: 8.5pt; color: #6B6F6B; letter-spacing: 1.5pt;
+      text-transform: uppercase; font-weight: 700;
+    }
+    .print-cover-badge {
+      margin-top: 92pt;
+      font-size: 9pt; color: #02360A; letter-spacing: 2.5pt;
+      text-transform: uppercase; font-weight: 700;
+    }
+    .print-cover-title {
+      font-size: 56pt; font-weight: 400; color: #02360A;
+      line-height: 1.02; letter-spacing: -1.2pt;
+      margin-top: 14pt;
+      font-style: italic;
+    }
+    .print-cover-tagline {
+      margin-top: 32pt;
+      font-size: 12pt; color: #2A2F2A; line-height: 1.55;
+      max-width: 5.6in;
+      font-weight: 400;
+    }
+    .print-cover-tagline strong { color: #02360A; font-weight: 700; }
+    .print-cover-spacer { flex: 1; }
+    .print-cover-footer {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      padding-top: 14pt;
+      border-top: 1pt solid #C9CCC8;
+    }
+    .print-cover-prep {
+      font-size: 7.5pt; color: #2A2F2A; letter-spacing: 2.5pt;
+      font-weight: 400;
+    }
+    .print-cover-confidential {
+      font-size: 7.5pt; color: #6B6F6B; letter-spacing: 1.5pt;
+      font-weight: 700;
+    }
 
-    /* Executive summary block */
+    /* ── EXECUTIVE SUMMARY (page 2 lead) ───────────────────────── */
     .exec-summary {
-      background: #f8f8f6;
-      border-left: 3pt solid #1F3864;
-      padding: 10pt 12pt;
-      margin-bottom: 16pt;
+      background: #FDFCF7;
+      border-left: 2.5pt solid #02360A;
+      padding: 14pt 16pt;
+      margin: 0 0 16pt;
       page-break-inside: avoid;
       page-break-after: avoid;
     }
-    .exec-summary h3 { margin: 0 0 6pt; font-size: 10pt; color: #1F3864; text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 600; }
-    .exec-line { font-size: 10pt; line-height: 1.55; margin-bottom: 3pt; color: #1a1a1a; }
-    .exec-line strong { color: #1F3864; }
+    .exec-summary h3 {
+      margin: 0 0 8pt;
+      font-size: 9pt; color: #02360A;
+      text-transform: uppercase; letter-spacing: 2pt; font-weight: 700;
+    }
+    .exec-line {
+      font-size: 10pt; line-height: 1.6; margin-bottom: 3pt;
+      color: #2A2F2A;
+    }
+    .exec-line strong { color: #02360A; font-weight: 700; }
 
-    /* Card layout */
+    /* ── SECTION NUMBERING (01 — TITLE) ────────────────────────── */
+    body { counter-reset: section; }
+    .deal-status-section,
+    .crop-cycle-card,
+    .health-monitor-card,
+    .chart-card { counter-increment: section; }
+    .deal-status-title::before,
+    .crop-cycle-card > h2:first-of-type::before,
+    .health-monitor-card > h2:first-of-type::before,
+    .chart-card > h2:first-of-type::before {
+      content: counter(section, decimal-leading-zero) "  \2014  ";
+      color: #B48B2A; font-weight: 700; letter-spacing: 1pt;
+    }
+
+    /* ── CARDS ──────────────────────────────────────────────────── */
     .deal-status-section, .crop-cycle-card, .health-monitor-card,
     .chart-card, .trigger-card {
       page-break-inside: avoid;
       box-shadow: none !important;
-      border: 1pt solid #ddd !important;
-      border-radius: 4pt !important;
-      margin-bottom: 10pt !important;
-      padding: 10pt 12pt !important;
+      background: #FDFCF7 !important;
+      border: 1pt solid #E2E0D7 !important;
+      border-radius: 3pt !important;
+      margin-bottom: 12pt !important;
+      padding: 14pt 16pt !important;
     }
-    .deal-card { padding: 10pt 12pt !important; }
-    .deal-status-title { font-size: 12pt !important; }
-    .deal-status-sub { font-size: 9pt !important; }
-    .deal-status-grid { gap: 6pt !important; }
-    .deal-label { font-size: 8pt !important; padding-right: 50pt !important; }
-    .deal-metric { font-size: 14pt !important; }
-    .deal-detail { font-size: 8.5pt !important; min-height: auto !important; }
-    .deal-badge { font-size: 8pt !important; padding: 2pt 6pt !important; top: 8pt !important; right: 10pt !important; }
+    h2, .deal-status-title {
+      font-size: 11pt !important; color: #02360A !important;
+      text-transform: uppercase; letter-spacing: 1.2pt;
+      margin: 0 0 4pt !important; font-weight: 700;
+    }
+    .desc, .deal-status-sub {
+      font-size: 9pt !important; color: #6B6F6B !important;
+      margin-bottom: 10pt !important; font-style: italic;
+    }
 
-    /* Section spacing */
-    h2 { font-size: 11pt !important; margin-bottom: 4pt !important; }
-    .desc { font-size: 9pt !important; margin-bottom: 8pt !important; }
+    /* ── DEAL STATUS CARDS (KPI style) ─────────────────────────── */
+    .deal-status-grid { gap: 8pt !important; }
+    .deal-card {
+      padding: 12pt 14pt !important;
+      background: #F6F3EA !important;
+      border: 1pt solid #E2E0D7 !important;
+      border-left: 3pt solid #02360A !important;
+    }
+    .deal-card.deal-green  { border-left-color: #02360A !important; }
+    .deal-card.deal-yellow { border-left-color: #B48B2A !important; }
+    .deal-card.deal-red    { border-left-color: #8B2A2A !important; }
+    .deal-card.deal-gray   { border-left-color: #6B6F6B !important; }
+    .deal-label {
+      font-size: 7.5pt !important; color: #6B6F6B !important;
+      letter-spacing: 1.5pt !important;
+      padding-right: 56pt !important; margin-bottom: 6pt !important;
+    }
+    .deal-metric {
+      font-size: 17pt !important; color: #02360A !important;
+      font-weight: 700 !important; line-height: 1.1 !important;
+    }
+    .deal-detail {
+      font-size: 8.5pt !important; min-height: auto !important;
+      color: #2A2F2A !important; margin-top: 4pt;
+    }
+    .deal-badge {
+      font-size: 7pt !important; padding: 2pt 6pt !important;
+      top: 10pt !important; right: 12pt !important;
+      letter-spacing: 0.8pt;
+    }
+    .deal-badge-green  { background: #C5D1BD !important; color: #02360A !important; }
+    .deal-badge-yellow { background: #F5E6C5 !important; color: #6B521A !important; }
+    .deal-badge-red    { background: #F0D6D6 !important; color: #7A2424 !important; }
+    .deal-badge-gray   { background: #E2E0D7 !important; color: #6B6F6B !important; }
 
-    /* Charts — paper-friendly heights */
+    /* ── CHARTS ─────────────────────────────────────────────────── */
     .chart-wrap { height: 240pt !important; page-break-inside: avoid; }
 
-    /* Crop cycle */
+    /* ── CROP CYCLE ─────────────────────────────────────────────── */
     .cycle-header-row, .cycle-row { grid-template-columns: 110pt 1fr !important; }
-    .cycle-label { font-size: 9pt !important; }
-    .cycle-status { font-size: 8pt !important; }
+    .cycle-label { font-size: 9pt !important; color: #2A2F2A !important; }
+    .cycle-status { font-size: 8pt !important; color: #6B6F6B !important; }
     .cycle-bar { height: 20pt !important; }
-    .cycle-today-marker { top: 22pt !important; }
-    .cycle-today-label { font-size: 8pt !important; }
-    .paca-note { font-size: 8pt !important; }
+    .cycle-cell.harvest   { background: #02360A !important; }
+    .cycle-cell.growing   { background: #8EA888 !important; }
+    .cycle-cell.planting  { background: #B48B2A !important; }
+    .cycle-cell.pruning   { background: #6B6F6B !important; }
+    .cycle-cell.offseason { background: #D4DCCD !important; }
+    .cycle-today-marker { top: 22pt !important; background: #B48B2A !important; }
+    .cycle-today-label {
+      font-size: 7.5pt !important; color: #B48B2A !important;
+      border-color: #B48B2A !important; letter-spacing: 0.5pt;
+    }
+    .cycle-month-labels { color: #6B6F6B !important; letter-spacing: 1pt; }
+    .paca-note { font-size: 8pt !important; color: #6B6F6B !important; }
+    .paca-note strong { color: #02360A !important; }
 
-    /* Crop Health — show selected crop content only */
+    /* ── CROP HEALTH MONITOR ────────────────────────────────────── */
     .crop-detail-header { margin-bottom: 8pt !important; }
-    .crop-name { font-size: 13pt !important; }
-    .risk-item { padding: 5pt 0 !important; font-size: 9pt !important; }
-    .risk-label { font-size: 9pt !important; }
-    .risk-advisory { font-size: 8pt !important; }
-    .crop-outlook { font-size: 8.5pt !important; margin-top: 8pt !important; padding-top: 6pt !important; }
+    .crop-name { font-size: 13pt !important; color: #02360A !important; font-weight: 700 !important; }
+    .crop-phase { color: #2A2F2A !important; }
+    .crop-phase strong { color: #02360A !important; }
+    .crop-overall { font-size: 7.5pt !important; padding: 3pt 9pt !important; letter-spacing: 1pt !important; }
+    .crop-overall.green  { background: #C5D1BD !important; color: #02360A !important; }
+    .crop-overall.yellow { background: #F5E6C5 !important; color: #6B521A !important; }
+    .crop-overall.red    { background: #F0D6D6 !important; color: #7A2424 !important; }
+    .rev-focus-title { color: #6B6F6B !important; font-style: italic; }
+    .rev-focus-title strong { color: #02360A !important; font-style: normal; }
+    .risk-item { padding: 6pt 0 !important; font-size: 9pt !important; }
+    .risk-label { font-size: 9pt !important; color: #2A2F2A !important; }
+    .risk-advisory { font-size: 8pt !important; color: #6B6F6B !important; font-style: italic; }
+    .risk-value { color: #2A2F2A !important; }
+    .risk-status.green  { background: #C5D1BD !important; color: #02360A !important; }
+    .risk-status.yellow { background: #F5E6C5 !important; color: #6B521A !important; }
+    .risk-status.red    { background: #F0D6D6 !important; color: #7A2424 !important; }
+    .crop-outlook { font-size: 8.5pt !important; color: #6B6F6B !important; }
+    .crop-outlook strong { color: #02360A !important; }
 
-    /* Bridge panel */
-    .bridge-kpis { gap: 6pt !important; }
-    .bridge-kpis .kpi { padding: 6pt 8pt !important; }
-    .bridge-footnotes { font-size: 7.5pt !important; }
-    .bridge-footnotes h4 { font-size: 9pt !important; }
+    /* ── BRIDGE PANEL ───────────────────────────────────────────── */
+    .bridge-kpis { gap: 8pt !important; }
+    .bridge-kpis .kpi { padding: 8pt 10pt !important; background: #F6F3EA !important; border: 1pt solid #E2E0D7 !important; }
+    .kpi .label { font-size: 7.5pt !important; color: #6B6F6B !important; letter-spacing: 1.5pt; }
+    .kpi .value { color: #02360A !important; font-weight: 700; }
+    .bridge-footnotes { font-size: 7.5pt !important; color: #6B6F6B !important; }
+    .bridge-footnotes h4 { font-size: 8.5pt !important; color: #02360A !important; letter-spacing: 1.5pt; }
+    .bridge-footnotes strong { color: #2A2F2A !important; }
 
-    /* Tables */
+    /* ── TABLES ─────────────────────────────────────────────────── */
     table.data { font-size: 8pt !important; }
-    table.data th, table.data td { padding: 3pt 5pt !important; }
+    table.data th {
+      padding: 4pt 6pt !important; background: #F6F3EA !important;
+      color: #6B6F6B !important; letter-spacing: 1pt;
+    }
+    table.data td { padding: 3pt 6pt !important; }
+    .pos { color: #02360A !important; }
+    .neg { color: #8B2A2A !important; }
 
-    /* Page breaks between major sections */
+    /* ── PAGE BREAKS ────────────────────────────────────────────── */
+    .deal-status-section { page-break-before: avoid; }
     .health-monitor-card { page-break-before: auto; }
     .chart-card#bridge-panel, .chart-card#weather-panel { page-break-before: page; }
 
-    /* Footer */
+    /* ── FOOTER ─────────────────────────────────────────────────── */
     footer {
-      border-top: 1pt solid #ccc;
-      padding-top: 8pt;
-      margin-top: 16pt;
-      font-size: 8pt;
-      page-break-inside: avoid;
+      display: none !important;
     }
   }
 </style>
@@ -479,12 +642,31 @@
 
 <div class="container">
 
-  <!-- Print-only report cover (hidden on screen) -->
+  <!-- Print-only report cover (hidden on screen) — Nord45 Partners brand -->
   <div class="print-cover">
-    <div class="print-cover-title">Videxport Pricing Surveillance</div>
-    <div class="print-cover-subtitle">Investor Status Report</div>
-    <div class="print-cover-date" id="print-cover-date"></div>
-    <div class="print-cover-meta">PACA-secured produce financing facility &middot; Hermosillo, Sonora &middot; USDA Nogales benchmark</div>
+    <div class="print-cover-top">
+      <div class="print-cover-brand"><span class="print-cover-brand-mark"></span>Nord 45 Partners</div>
+      <div class="print-cover-stamp">Surveillance Report</div>
+    </div>
+    <div class="print-cover-section">
+      <div>Agricultural Supply Chain Finance</div>
+      <div id="print-cover-month">May 2026</div>
+    </div>
+
+    <div class="print-cover-badge">Facility Surveillance &mdash; Videxport / Santa In&eacute;s</div>
+    <div class="print-cover-title">Facility status,<br>at a glance.</div>
+    <div class="print-cover-tagline">
+      Independent week-on-week surveillance of the <strong>Seasonal Receivables-Backed Working Capital Facility</strong>
+      &mdash; prices, deliveries, crop health and PACA collateral coverage as of
+      <strong id="print-cover-date">&mdash;</strong>.
+    </div>
+
+    <div class="print-cover-spacer"></div>
+
+    <div class="print-cover-footer">
+      <div class="print-cover-prep">P R E P A R E D &nbsp;&nbsp; F O R &nbsp;&nbsp; T H E &nbsp;&nbsp; F A C I L I T Y &nbsp;&nbsp; C O U N T E R P A R T I E S</div>
+      <div class="print-cover-confidential">Strictly Private &amp; Confidential</div>
+    </div>
   </div>
 
   <!-- Print-only executive summary (hidden on screen) -->
@@ -2067,7 +2249,9 @@ function renderExecutiveSummary() {
   if (!dateEl || !bodyEl) return;
 
   const now = new Date();
-  dateEl.textContent = 'Report as of ' + now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  dateEl.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const monthEl = document.getElementById('print-cover-month');
+  if (monthEl) monthEl.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
 
   // Latest realized price + YoY
   const dated = VID.filter(r => r.date);
