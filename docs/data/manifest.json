@@ -1,7 +1,7 @@
 {
-  "refreshed_utc": "2026-05-22T19:18:16Z",
-  "latest_report_date": "2026-05-21",
-  "total_rows": 9292,
-  "new_rows_this_run": 51,
+  "refreshed_utc": "2026-05-23T17:41:59Z",
+  "latest_report_date": "2026-05-22",
+  "total_rows": 9309,
+  "new_rows_this_run": 17,
   "schedule": "daily 14:00 UTC"
 }
