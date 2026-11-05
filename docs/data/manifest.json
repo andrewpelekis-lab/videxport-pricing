@@ -1,7 +1,7 @@
 {
-  "refreshed_utc": "2026-11-04T20:40:09Z",
-  "latest_report_date": "2026-11-03",
-  "total_rows": 9765,
+  "refreshed_utc": "2026-11-05T20:56:16Z",
+  "latest_report_date": "2026-11-04",
+  "total_rows": 9778,
   "new_rows_this_run": 13,
   "schedule": "daily 14:00 UTC"
 }
